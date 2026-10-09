@@ -2,6 +2,8 @@
 
 所有接口位于 `/api`，响应为 JSON，错误结构为 `{"error":"中文提示"}`。写请求携带 `Content-Type: application/json`（有请求体时）及 `X-Hao123-Request: 1`。登录后使用同源会话 Cookie。无有效会话返回 401，无管理权限返回 403，重复邮箱/网址或关联资源冲突返回 409。
 
+用户登录与后台登录相互独立，账号类型须与登录接口匹配。用户 Cookie 为 `hao123_session`（Path `/`），后台 Cookie 为 `hao123_admin_session`（Path `/api/admin`）；后台登录、退出不会替换或撤销首页用户会话。旧版本的管理员用户 Cookie 不再用于首页登录。
+
 | 方法         | 路由                             | 权限 / 行为                                                             |
 | ------------ | -------------------------------- | ----------------------------------------------------------------------- |
 | GET          | `/health`                        | 公共；验证数据库连通                                                    |
@@ -11,6 +13,10 @@
 | POST         | `/auth/logout`                   | 撤销当前会话                                                            |
 | GET          | `/auth/me`                       | `{user:...}`，未登录时为 null                                           |
 | PUT          | `/auth/password`                 | 用户；`{current,next}`，撤销旧会话并签发当前会话                        |
+| POST         | `/admin/auth/login`              | 管理账号；`{email,password}`，签发独立后台会话                          |
+| POST         | `/admin/auth/logout`             | 仅撤销后台会话，不影响首页用户登录                                      |
+| GET          | `/admin/auth/me`                 | 后台账号状态，未登录时 user 为 null                                     |
+| PUT          | `/admin/auth/password`           | 管理员；`{current,next}`，撤销旧会话并签发后台会话                      |
 | GET / PUT    | `/preferences`                   | 用户；读取 / 整体保存首页配置                                           |
 | DELETE       | `/history`                       | 用户；清除使用统计                                                      |
 | POST         | `/clicks`                        | 用户；`{siteId}`，隐私关闭时返回 `recorded:false`                       |

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { LoaderCircle, ShieldCheck, LogOut, Settings2 } from "lucide-react";
+import { LoaderCircle, ShieldCheck, LogOut } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -64,14 +64,6 @@ export function AccountDialog({ open, onClose }) {
             常用网站与首页设置{syncState === "已同步" ? "已同步" : syncState}
           </span>
         </div>
-        {user.role === "admin" && (
-          <Button asChild variant="outline">
-            <a href="/admin">
-              <Settings2 size={16} />
-              打开管理后台
-            </a>
-          </Button>
-        )}
         <form onSubmit={change} className="space-y-4">
           <h3 className="text-sm font-medium">修改密码</h3>
           <div className="space-y-2">

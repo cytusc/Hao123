@@ -92,14 +92,26 @@ func env(key, fallback string) string {
 	}
 	return fallback
 }
+func adminRequest(r *http.Request) bool { return strings.HasPrefix(r.URL.Path, "/api/admin/") }
+func sessionCookie(r *http.Request) (string, string) {
+	if adminRequest(r) {
+		return "hao123_admin_session", "/api/admin"
+	}
+	return "hao123_session", "/"
+}
 func (a *App) session(r *http.Request) (*User, error) {
-	cookie, err := r.Cookie("hao123_session")
+	name, _ := sessionCookie(r)
+	cookie, err := r.Cookie(name)
 	if err != nil {
 		return nil, nil
 	}
 	u := &User{}
 	err = a.db.QueryRow(r.Context(), `SELECT u.id,u.email,u.name,u.role,u.disabled,u.created_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now() AND NOT u.disabled`, hashToken(cookie.Value)).Scan(&u.ID, &u.Email, &u.Name, &u.Role, &u.Disabled, &u.Created)
 	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	// Keep legacy administrator cookies and renamed tokens out of user sessions.
+	if err == nil && ((u.Role == "admin") != adminRequest(r)) {
 		return nil, nil
 	}
 	return u, err
@@ -160,6 +172,10 @@ func (a *App) mux() *http.ServeMux {
 	m.HandleFunc("POST /api/auth/logout", a.route(a.logout, ""))
 	m.HandleFunc("GET /api/auth/me", a.route(a.me, ""))
 	m.HandleFunc("PUT /api/auth/password", a.route(a.password, "user"))
+	m.HandleFunc("POST /api/admin/auth/login", a.route(a.login, ""))
+	m.HandleFunc("POST /api/admin/auth/logout", a.route(a.logout, ""))
+	m.HandleFunc("GET /api/admin/auth/me", a.route(a.me, ""))
+	m.HandleFunc("PUT /api/admin/auth/password", a.route(a.password, "admin"))
 	m.HandleFunc("GET /api/preferences", a.route(a.getPrefs, "user"))
 	m.HandleFunc("PUT /api/preferences", a.route(a.savePrefs, "user"))
 	m.HandleFunc("DELETE /api/history", a.route(a.clearHistory, "user"))

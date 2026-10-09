@@ -30,7 +30,8 @@ type credentials struct {
 
 func (a *App) createSession(w http.ResponseWriter, r *http.Request, u *User) error {
 	token := randomID()
-	if cookie, err := r.Cookie("hao123_session"); err == nil {
+	name, path := sessionCookie(r)
+	if cookie, err := r.Cookie(name); err == nil {
 		if _, err = a.db.Exec(r.Context(), "DELETE FROM sessions WHERE token_hash=$1", hashToken(cookie.Value)); err != nil {
 			return err
 		}
@@ -38,7 +39,7 @@ func (a *App) createSession(w http.ResponseWriter, r *http.Request, u *User) err
 	if _, err := a.db.Exec(r.Context(), "INSERT INTO sessions(token_hash,user_id,expires_at) VALUES($1,$2,now()+interval '30 days')", hashToken(token), u.ID); err != nil {
 		return err
 	}
-	http.SetCookie(w, &http.Cookie{Name: "hao123_session", Value: token, Path: "/", HttpOnly: true, Secure: a.secure, SameSite: http.SameSiteLaxMode, MaxAge: 30 * 86400})
+	http.SetCookie(w, &http.Cookie{Name: name, Value: token, Path: path, HttpOnly: true, Secure: a.secure, SameSite: http.SameSiteLaxMode, MaxAge: 30 * 86400})
 	respond(w, 200, map[string]any{"user": u})
 	return nil
 }
@@ -90,18 +91,19 @@ func (a *App) login(w http.ResponseWriter, r *http.Request, _ *User) error {
 	if err != nil {
 		return err
 	}
-	if bcrypt.CompareHashAndPassword([]byte(hash), []byte(c.Password)) != nil || u.Disabled {
+	if bcrypt.CompareHashAndPassword([]byte(hash), []byte(c.Password)) != nil || u.Disabled || ((u.Role == "admin") != adminRequest(r)) {
 		return fail(401, "邮箱或密码不正确，或账号已停用")
 	}
 	return a.createSession(w, r, u)
 }
 func (a *App) logout(w http.ResponseWriter, r *http.Request, _ *User) error {
-	if c, err := r.Cookie("hao123_session"); err == nil {
+	name, path := sessionCookie(r)
+	if c, err := r.Cookie(name); err == nil {
 		if _, err = a.db.Exec(r.Context(), "DELETE FROM sessions WHERE token_hash=$1", hashToken(c.Value)); err != nil {
 			return err
 		}
 	}
-	http.SetCookie(w, &http.Cookie{Name: "hao123_session", Value: "", Path: "/", HttpOnly: true, Secure: a.secure, SameSite: http.SameSiteLaxMode, MaxAge: -1})
+	http.SetCookie(w, &http.Cookie{Name: name, Value: "", Path: path, HttpOnly: true, Secure: a.secure, SameSite: http.SameSiteLaxMode, MaxAge: -1})
 	respond(w, 200, map[string]bool{"ok": true})
 	return nil
 }

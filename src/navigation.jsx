@@ -44,7 +44,8 @@ const cloudPrefs = (p) => ({
 const Context = createContext(null);
 export const useNavigation = () => useContext(Context);
 
-export function NavigationProvider({ children }) {
+export function NavigationProvider({ children, adminMode = false }) {
+  const authPath = adminMode ? "/admin/auth" : "/auth";
   const [categories, setCategories] = useState(seedCategories);
   const [prefs, rawSetPrefs] = useState(guestPrefs);
   const prefsRef = useRef(prefs);
@@ -83,6 +84,7 @@ export function NavigationProvider({ children }) {
     }
   }, []);
   const refreshRecommendations = useCallback(async () => {
+    if (adminMode) return;
     const version = epoch.current;
     try {
       const data = await api("/recommendations");
@@ -90,26 +92,29 @@ export function NavigationProvider({ children }) {
     } catch {
       /* Keep current recommendations; catalog and sync errors are displayed separately. */
     }
-  }, []);
-  const hydrate = useCallback(async (nextUser) => {
-    epoch.current++;
-    if (nextUser) {
-      const p = await api("/preferences");
-      lastSaved.current = JSON.stringify(p);
-      rawSetPrefs({ ...defaults, ...p, history: {} });
-    } else {
-      lastSaved.current = "";
-      rawSetPrefs(guestPrefs());
-    }
-    setUser(nextUser);
-    setRecommendation({ common: [], sites: [], method: "" });
-    setError("");
-    setSyncState(nextUser ? "已同步" : "");
-  }, []);
+  }, [adminMode]);
+  const hydrate = useCallback(
+    async (nextUser) => {
+      epoch.current++;
+      if (nextUser && !adminMode) {
+        const p = await api("/preferences");
+        lastSaved.current = JSON.stringify(p);
+        rawSetPrefs({ ...defaults, ...p, history: {} });
+      } else {
+        lastSaved.current = "";
+        rawSetPrefs(guestPrefs());
+      }
+      setUser(nextUser);
+      setRecommendation({ common: [], sites: [], method: "" });
+      setError("");
+      setSyncState(nextUser && !adminMode ? "已同步" : "");
+    },
+    [adminMode],
+  );
   useEffect(() => {
     let alive = true;
     refreshCatalog();
-    api("/auth/me")
+    api(`${authPath}/me`)
       .then(async (data) => {
         if (alive) await hydrate(data.user);
       })
@@ -120,29 +125,32 @@ export function NavigationProvider({ children }) {
     return () => {
       alive = false;
     };
-  }, [hydrate, refreshCatalog]);
+  }, [hydrate, refreshCatalog, authPath]);
   useEffect(() => {
     if (ready) refreshRecommendations();
   }, [user, ready, refreshRecommendations]);
-  const persist = useCallback(async (p, account) => {
-    if (!account) return;
-    const serialized = JSON.stringify(cloudPrefs(p));
-    if (serialized === lastSaved.current) return;
-    setSyncState("正在同步");
-    const task = chain.current
-      .catch(() => {})
-      .then(async () => {
-        if (userRef.current?.id !== account.id) return;
-        await api("/preferences", { method: "PUT", body: cloudPrefs(p) });
-        lastSaved.current = serialized;
-        setSyncState("已同步");
-        setError("");
-      });
-    chain.current = task;
-    return task;
-  }, []);
+  const persist = useCallback(
+    async (p, account) => {
+      if (!account || adminMode) return;
+      const serialized = JSON.stringify(cloudPrefs(p));
+      if (serialized === lastSaved.current) return;
+      setSyncState("正在同步");
+      const task = chain.current
+        .catch(() => {})
+        .then(async () => {
+          if (userRef.current?.id !== account.id) return;
+          await api("/preferences", { method: "PUT", body: cloudPrefs(p) });
+          lastSaved.current = serialized;
+          setSyncState("已同步");
+          setError("");
+        });
+      chain.current = task;
+      return task;
+    },
+    [adminMode],
+  );
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || adminMode) return;
     if (!user) {
       try {
         localStorage.setItem("hao123-prefs-v1", JSON.stringify(prefs));
@@ -165,16 +173,19 @@ export function NavigationProvider({ children }) {
       350,
     );
     return () => clearTimeout(timer);
-  }, [prefs, user, ready, persist, refreshRecommendations]);
+  }, [prefs, user, ready, persist, refreshRecommendations, adminMode]);
   const authenticate = async (mode, form) => {
-    const data = await api(`/auth/${mode}`, { method: "POST", body: form });
+    const data = await api(`${authPath}/${adminMode ? "login" : mode}`, {
+      method: "POST",
+      body: form,
+    });
     await hydrate(data.user);
     setAuthOpen(false);
   };
   const logout = async () => {
     await persist(prefsRef.current, userRef.current);
     await chain.current;
-    await api("/auth/logout", { method: "POST" });
+    await api(`${authPath}/logout`, { method: "POST" });
     await hydrate(null);
   };
   const record = (id) => {
@@ -235,6 +246,7 @@ export function NavigationProvider({ children }) {
   return (
     <Context.Provider
       value={{
+        adminMode,
         categories,
         prefs,
         setPrefs,

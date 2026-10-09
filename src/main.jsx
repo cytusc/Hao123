@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   Search,
@@ -35,9 +35,12 @@ import { defaultIds, engines } from "./data";
 import { NavigationProvider, useNavigation } from "./navigation";
 import AuthDialog from "./AuthDialog";
 import { AccountDialog, SubmissionDialog } from "./AccountDialogs";
-import Admin from "./Admin";
 import "./admin.css";
 import "./styles.css";
+
+const Admin = lazy(() => import("./Admin"));
+const adminMode =
+  location.pathname === "/admin" || location.pathname.startsWith("/admin/");
 
 const icons = {
   Newspaper,
@@ -315,7 +318,7 @@ function App() {
           </button>
           <button
             className="login-button"
-            aria-label={user ? user.name : "登录 / 注册"}
+            aria-label={user ? user.name : "用户登录"}
             disabled={!ready}
             onClick={() => (user ? setAccountOpen(true) : setAuthOpen(true))}
           >
@@ -325,7 +328,7 @@ function App() {
                 {user.name}
               </>
             ) : (
-              "登录 / 注册"
+              "用户登录"
             )}
           </button>
         </div>
@@ -798,7 +801,6 @@ function App() {
             >
               提交网站
             </button>
-            {user?.role === "admin" && <a href="/admin">管理后台</a>}
           </div>
         </footer>
       </main>
@@ -975,7 +977,7 @@ function App() {
               精选新闻、视频、购物、办公和学习等常用网站，让你少翻找、快一步。
             </p>
             <p>
-              目录由后台管理维护。访客常用保存在本机，登录后可同步常用与设置；用户可提交网站，由管理员审核收录。点击记录用于可关闭、可清空的规则推荐。
+              访客常用保存在本机，登录后可同步常用与设置。你也可以提交喜欢的网站，审核通过后加入公开目录。点击记录用于可关闭、可清空的个性化推荐。
             </p>
             <p>
               搜索会先查找站内网站，也可以继续使用你选择的搜索引擎。外部网站的服务与内容由其运营方提供。
@@ -998,8 +1000,14 @@ function App() {
   );
 }
 createRoot(document.getElementById("root")).render(
-  <NavigationProvider>
-    {location.pathname.startsWith("/admin") ? <Admin /> : <App />}
+  <NavigationProvider adminMode={adminMode}>
+    {adminMode ? (
+      <Suspense fallback={<div className="admin-gate">正在加载…</div>}>
+        <Admin />
+      </Suspense>
+    ) : (
+      <App />
+    )}
     <AuthDialog />
   </NavigationProvider>,
 );
