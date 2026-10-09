@@ -18,7 +18,9 @@ npm run dev
 
 首页：http://localhost:5173；后台：http://localhost:5173/admin；健康检查：http://localhost:8080/api/health。
 
-后台账号为 `admin@hao123.local`，首次启动生成的随机密码保存在 `.local/admin-password`。该文件和 `.local/backend.env` 均已忽略，不进入 Git。密码可在首页账号弹窗修改；后续启动不会重置已有管理员密码。
+后台账号为 `admin@hao123.local`，首次启动生成的随机密码保存在 `.local/admin-password`。该文件和 `.local/backend.env` 均已忽略，不进入 Git。后续启动不会重置已有管理员密码。
+
+首页仅提供普通用户登录、注册和账号设置，不显示后台入口或管理相关说明。后台需直接访问 `/admin`，仅支持管理员登录。两端使用独立登录接口和会话 Cookie，在同一浏览器中可以分别登录，互不替换账号，退出任意一端不会影响另一端。普通用户可在首页账号弹窗修改密码；管理员可通过 `/api/admin/auth/password` 修改密码。
 
 开发脚本默认使用 `/usr/lib/postgresql/16/bin`，其他安装位置可通过 `PG_BIN` 指定。它使用 `.local/postgres`、端口 `55432`，不会修改系统 PostgreSQL 实例。开发数据库仅监听本机，使用 trust 认证，仅适用于本地开发。停止开发数据库：
 

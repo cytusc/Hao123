@@ -78,14 +78,18 @@ func TestAPIIntegration(t *testing.T) {
 	auth := func(path, email string) *http.Cookie {
 		t.Helper()
 		payload := map[string]string{"email": email, "password": "integration-user-password"}
+		authPrefix := "/api/auth/"
+		cookieName, cookiePath := "hao123_session", "/"
 		if path == "register" {
 			payload["name"] = "测试用户"
 		}
 		if path == "login" && email == "admin@test.example" {
 			payload["password"] = "integration-admin-password"
+			authPrefix = "/api/admin/auth/"
+			cookieName, cookiePath = "hao123_admin_session", "/api/admin"
 		}
 		raw, _ := json.Marshal(payload)
-		req, _ := http.NewRequest("POST", server.URL+"/api/auth/"+path, bytes.NewReader(raw))
+		req, _ := http.NewRequest("POST", server.URL+authPrefix+path, bytes.NewReader(raw))
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-Hao123-Request", "1")
 		res, err := http.DefaultClient.Do(req)
@@ -97,8 +101,8 @@ func TestAPIIntegration(t *testing.T) {
 			t.Fatalf("auth returned %d", res.StatusCode)
 		}
 		for _, c := range res.Cookies() {
-			if c.Name == "hao123_session" {
-				if !c.HttpOnly || c.SameSite != http.SameSiteLaxMode {
+			if c.Name == cookieName {
+				if !c.HttpOnly || c.SameSite != http.SameSiteLaxMode || c.Path != cookiePath {
 					t.Fatal("cookie security attributes missing")
 				}
 				return c
@@ -117,7 +121,25 @@ func TestAPIIntegration(t *testing.T) {
 	admin := auth("login", "admin@test.example")
 	request("POST", "/api/auth/register", map[string]string{"email": "first@test.example", "password": "integration-user-password", "name": "重复"}, nil, 409)
 	request("POST", "/api/auth/register", map[string]string{"email": "extra@test.example", "password": "integration-user-password", "name": "提权", "role": "admin"}, nil, 400)
-	request("GET", "/api/admin/users", nil, c1, 403)
+	request("GET", "/api/admin/users", nil, c1, 401)
+	request("POST", "/api/auth/login", map[string]string{"email": "admin@test.example", "password": "integration-admin-password"}, nil, 401)
+	request("POST", "/api/admin/auth/login", map[string]string{"email": "first@test.example", "password": "integration-user-password"}, nil, 401)
+	if request("GET", "/api/auth/me", nil, admin, 200)["user"] != nil {
+		t.Fatal("administrator session leaked into homepage")
+	}
+	if request("GET", "/api/admin/auth/me", nil, c1, 200)["user"] != nil {
+		t.Fatal("user session leaked into admin")
+	}
+	legacyAdmin := *admin
+	legacyAdmin.Name = "hao123_session"
+	if request("GET", "/api/auth/me", nil, &legacyAdmin, 200)["user"] != nil {
+		t.Fatal("legacy administrator cookie became a homepage user session")
+	}
+	renamedUser := *c1
+	renamedUser.Name = "hao123_admin_session"
+	request("GET", "/api/admin/overview", nil, &renamedUser, 401)
+	request("POST", "/api/auth/logout", nil, admin, 200)
+	request("GET", "/api/admin/overview", nil, admin, 200)
 	// Enforce the custom request header and origin checks even when cookies are valid.
 	for _, origin := range []string{"http://evil.example", ""} {
 		req, _ := http.NewRequest("POST", server.URL+"/api/auth/logout", nil)
@@ -211,8 +233,12 @@ func TestAPIIntegration(t *testing.T) {
 	if me["user"] != nil {
 		t.Fatal("disabled user retained a valid session")
 	}
-	request("POST", "/api/auth/logout", nil, admin, 200)
+	independentUser := auth("register", "independent@test.example")
+	request("POST", "/api/admin/auth/logout", nil, admin, 200)
 	request("GET", "/api/admin/overview", nil, admin, 401)
+	if request("GET", "/api/auth/me", nil, independentUser, 200)["user"] == nil {
+		t.Fatal("admin logout invalidated a user session")
+	}
 	// Verify that sessions contain digests, never the raw bearer token.
 	var token string
 	if err = db.QueryRow(ctx, "SELECT token_hash FROM sessions LIMIT 1").Scan(&token); err == nil && (len(token) != 64 || strings.Contains(token, c1.Value)) {

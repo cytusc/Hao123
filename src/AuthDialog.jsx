@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { useNavigation } from "./navigation";
 
 export default function AuthDialog() {
-  const { authOpen, setAuthOpen, authenticate } = useNavigation();
+  const { authOpen, setAuthOpen, authenticate, adminMode } = useNavigation();
   const [mode, setMode] = useState("login");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -42,14 +42,20 @@ export default function AuthDialog() {
             <Grid2X2 size={23} />
           </span>
           <DialogTitle>
-            {mode === "login" ? "登录，找回你的常用网站" : "创建你的轻导航账号"}
+            {adminMode
+              ? "管理员登录"
+              : mode === "login"
+                ? "用户登录"
+                : "创建你的轻导航账号"}
           </DialogTitle>
           <DialogDescription>
-            收藏、置顶和首页设置，换一台设备也还在。
+            {adminMode
+              ? "使用管理账号进入导航管理台。"
+              : "收藏、置顶和首页设置，换一台设备也还在。"}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-4 mt-2">
-          {mode === "register" && (
+          {!adminMode && mode === "register" && (
             <div className="space-y-2">
               <Label htmlFor="auth-name">昵称</Label>
               <Input
@@ -98,18 +104,22 @@ export default function AuthDialog() {
             {mode === "login" ? "登录" : "注册并登录"}
           </Button>
         </form>
-        <Button
-          variant="ghost"
-          onClick={() => {
-            setMode(mode === "login" ? "register" : "login");
-            setError("");
-          }}
-        >
-          {mode === "login" ? "还没有账号？创建账号" : "已有账号？返回登录"}
-        </Button>
+        {!adminMode && (
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setMode(mode === "login" ? "register" : "login");
+              setError("");
+            }}
+          >
+            {mode === "login" ? "还没有账号？创建账号" : "已有账号？返回登录"}
+          </Button>
+        )}
         <p className="auth-note">
           <LockKeyhole size={13} />
-          密码加密保存，访客仍可直接使用导航。
+          {adminMode
+            ? "仅限管理账号使用。"
+            : "密码加密保存，访客仍可直接使用导航。"}
         </p>
       </DialogContent>
     </Dialog>
