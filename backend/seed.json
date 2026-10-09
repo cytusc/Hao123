@@ -1,0 +1,698 @@
+[
+  {
+    "id": "news",
+    "name": "新闻资讯",
+    "icon": "Newspaper",
+    "sites": [
+      {
+        "id": "people",
+        "name": "人民网",
+        "url": "https://www.people.com.cn",
+        "mark": "人",
+        "color": "#c64343",
+        "description": ""
+      },
+      {
+        "id": "xinhuanet",
+        "name": "新华网",
+        "url": "https://www.news.cn",
+        "mark": "新",
+        "color": "#3876b9",
+        "description": ""
+      },
+      {
+        "id": "sina",
+        "name": "新浪新闻",
+        "url": "https://news.sina.com.cn",
+        "mark": "新",
+        "color": "#e84b41",
+        "description": ""
+      },
+      {
+        "id": "sohu",
+        "name": "搜狐",
+        "url": "https://www.sohu.com",
+        "mark": "狐",
+        "color": "#e5a327",
+        "description": ""
+      },
+      {
+        "id": "netease",
+        "name": "网易新闻",
+        "url": "https://news.163.com",
+        "mark": "网",
+        "color": "#d94d49",
+        "description": ""
+      },
+      {
+        "id": "qqnews",
+        "name": "腾讯新闻",
+        "url": "https://news.qq.com",
+        "mark": "腾",
+        "color": "#4289dd",
+        "description": ""
+      },
+      {
+        "id": "thepaper",
+        "name": "澎湃新闻",
+        "url": "https://www.thepaper.cn",
+        "mark": "澎",
+        "color": "#2d3443",
+        "description": ""
+      },
+      {
+        "id": "ifeng",
+        "name": "凤凰网",
+        "url": "https://www.ifeng.com",
+        "mark": "凤",
+        "color": "#c34c48",
+        "description": ""
+      },
+      {
+        "id": "bbc",
+        "name": "BBC中文",
+        "url": "https://www.bbc.com/zhongwen",
+        "mark": "B",
+        "color": "#303846",
+        "description": ""
+      },
+      {
+        "id": "zaobao",
+        "name": "联合早报",
+        "url": "https://www.zaobao.com",
+        "mark": "早",
+        "color": "#bb4644",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "id": "video",
+    "name": "视频娱乐",
+    "icon": "Clapperboard",
+    "sites": [
+      {
+        "id": "bilibili",
+        "name": "哔哩哔哩",
+        "url": "https://www.bilibili.com",
+        "mark": "哔",
+        "color": "#eb7197",
+        "description": ""
+      },
+      {
+        "id": "iqiyi",
+        "name": "爱奇艺",
+        "url": "https://www.iqiyi.com",
+        "mark": "爱",
+        "color": "#27ac5b",
+        "description": ""
+      },
+      {
+        "id": "qqvideo",
+        "name": "腾讯视频",
+        "url": "https://v.qq.com",
+        "mark": "▶",
+        "color": "#efb128",
+        "description": ""
+      },
+      {
+        "id": "youku",
+        "name": "优酷",
+        "url": "https://www.youku.com",
+        "mark": "优",
+        "color": "#249edf",
+        "description": ""
+      },
+      {
+        "id": "douyin",
+        "name": "抖音",
+        "url": "https://www.douyin.com",
+        "mark": "♪",
+        "color": "#303341",
+        "description": ""
+      },
+      {
+        "id": "mango",
+        "name": "芒果TV",
+        "url": "https://www.mgtv.com",
+        "mark": "芒",
+        "color": "#ee9a28",
+        "description": ""
+      },
+      {
+        "id": "kuaishou",
+        "name": "快手",
+        "url": "https://www.kuaishou.com",
+        "mark": "快",
+        "color": "#ef7438",
+        "description": ""
+      },
+      {
+        "id": "douban",
+        "name": "豆瓣电影",
+        "url": "https://movie.douban.com",
+        "mark": "豆",
+        "color": "#339767",
+        "description": ""
+      },
+      {
+        "id": "youtube",
+        "name": "YouTube",
+        "url": "https://www.youtube.com",
+        "mark": "▶",
+        "color": "#e74d4d",
+        "description": ""
+      },
+      {
+        "id": "cctv",
+        "name": "央视网",
+        "url": "https://www.cctv.com",
+        "mark": "央",
+        "color": "#b94843",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "id": "shopping",
+    "name": "购物生活",
+    "icon": "ShoppingBag",
+    "sites": [
+      {
+        "id": "taobao",
+        "name": "淘宝",
+        "url": "https://www.taobao.com",
+        "mark": "淘",
+        "color": "#f18b2c",
+        "description": ""
+      },
+      {
+        "id": "jd",
+        "name": "京东",
+        "url": "https://www.jd.com",
+        "mark": "京",
+        "color": "#e24f4f",
+        "description": ""
+      },
+      {
+        "id": "tmall",
+        "name": "天猫",
+        "url": "https://www.tmall.com",
+        "mark": "猫",
+        "color": "#c84248",
+        "description": ""
+      },
+      {
+        "id": "pdd",
+        "name": "拼多多",
+        "url": "https://www.pinduoduo.com",
+        "mark": "拼",
+        "color": "#e95a4c",
+        "description": ""
+      },
+      {
+        "id": "meituan",
+        "name": "美团",
+        "url": "https://www.meituan.com",
+        "mark": "美",
+        "color": "#d5a91e",
+        "description": ""
+      },
+      {
+        "id": "dianping",
+        "name": "大众点评",
+        "url": "https://www.dianping.com",
+        "mark": "评",
+        "color": "#ed803b",
+        "description": ""
+      },
+      {
+        "id": "smzdm",
+        "name": "什么值得买",
+        "url": "https://www.smzdm.com",
+        "mark": "值",
+        "color": "#d55152",
+        "description": ""
+      },
+      {
+        "id": "ctrip",
+        "name": "携程旅行",
+        "url": "https://www.ctrip.com",
+        "mark": "程",
+        "color": "#3e84d3",
+        "description": ""
+      },
+      {
+        "id": "12306",
+        "name": "铁路12306",
+        "url": "https://www.12306.cn",
+        "mark": "铁",
+        "color": "#4681c2",
+        "description": ""
+      },
+      {
+        "id": "amap",
+        "name": "高德地图",
+        "url": "https://www.amap.com",
+        "mark": "高",
+        "color": "#478bd8",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "id": "social",
+    "name": "社交社区",
+    "icon": "MessagesSquare",
+    "sites": [
+      {
+        "id": "zhihu",
+        "name": "知乎",
+        "url": "https://www.zhihu.com",
+        "mark": "知",
+        "color": "#367ad7",
+        "description": ""
+      },
+      {
+        "id": "weibo",
+        "name": "微博",
+        "url": "https://weibo.com",
+        "mark": "微",
+        "color": "#e45646",
+        "description": ""
+      },
+      {
+        "id": "xiaohongshu",
+        "name": "小红书",
+        "url": "https://www.xiaohongshu.com",
+        "mark": "红",
+        "color": "#e65765",
+        "description": ""
+      },
+      {
+        "id": "doubanhome",
+        "name": "豆瓣",
+        "url": "https://www.douban.com",
+        "mark": "豆",
+        "color": "#319461",
+        "description": ""
+      },
+      {
+        "id": "wechat",
+        "name": "微信网页版",
+        "url": "https://wx.qq.com",
+        "mark": "微",
+        "color": "#30af6e",
+        "description": ""
+      },
+      {
+        "id": "tieba",
+        "name": "百度贴吧",
+        "url": "https://tieba.baidu.com",
+        "mark": "贴",
+        "color": "#3f7ee0",
+        "description": ""
+      },
+      {
+        "id": "v2ex",
+        "name": "V2EX",
+        "url": "https://www.v2ex.com",
+        "mark": "V",
+        "color": "#596474",
+        "description": ""
+      },
+      {
+        "id": "jike",
+        "name": "即刻",
+        "url": "https://web.okjike.com",
+        "mark": "即",
+        "color": "#bd9c1d",
+        "description": ""
+      },
+      {
+        "id": "juejin",
+        "name": "掘金",
+        "url": "https://juejin.cn",
+        "mark": "掘",
+        "color": "#397ced",
+        "description": ""
+      },
+      {
+        "id": "sspai",
+        "name": "少数派",
+        "url": "https://sspai.com",
+        "mark": "少",
+        "color": "#cb5c58",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "id": "work",
+    "name": "邮箱办公",
+    "icon": "Mail",
+    "sites": [
+      {
+        "id": "qqmail",
+        "name": "QQ邮箱",
+        "url": "https://mail.qq.com",
+        "mark": "邮",
+        "color": "#4a8ec6",
+        "description": ""
+      },
+      {
+        "id": "163mail",
+        "name": "网易邮箱",
+        "url": "https://mail.163.com",
+        "mark": "邮",
+        "color": "#cb4d4d",
+        "description": ""
+      },
+      {
+        "id": "gmail",
+        "name": "Gmail",
+        "url": "https://mail.google.com",
+        "mark": "M",
+        "color": "#d35349",
+        "description": ""
+      },
+      {
+        "id": "outlook",
+        "name": "Outlook",
+        "url": "https://outlook.live.com",
+        "mark": "O",
+        "color": "#327cbf",
+        "description": ""
+      },
+      {
+        "id": "feishu",
+        "name": "飞书",
+        "url": "https://www.feishu.cn",
+        "mark": "飞",
+        "color": "#467ee1",
+        "description": ""
+      },
+      {
+        "id": "wps",
+        "name": "WPS",
+        "url": "https://www.wps.cn",
+        "mark": "W",
+        "color": "#d75b59",
+        "description": ""
+      },
+      {
+        "id": "notion",
+        "name": "Notion",
+        "url": "https://www.notion.so",
+        "mark": "N",
+        "color": "#3c4654",
+        "description": ""
+      },
+      {
+        "id": "tencentdocs",
+        "name": "腾讯文档",
+        "url": "https://docs.qq.com",
+        "mark": "文",
+        "color": "#387be4",
+        "description": ""
+      },
+      {
+        "id": "yuque",
+        "name": "语雀",
+        "url": "https://www.yuque.com",
+        "mark": "雀",
+        "color": "#36a37a",
+        "description": ""
+      },
+      {
+        "id": "dingtalk",
+        "name": "钉钉",
+        "url": "https://www.dingtalk.com",
+        "mark": "钉",
+        "color": "#407bdb",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "id": "ai",
+    "name": "AI 工具",
+    "icon": "Sparkles",
+    "sites": [
+      {
+        "id": "deepseek",
+        "name": "DeepSeek",
+        "url": "https://chat.deepseek.com",
+        "mark": "D",
+        "color": "#557be3",
+        "description": "擅长推理与编程的 AI 助手"
+      },
+      {
+        "id": "doubao",
+        "name": "豆包",
+        "url": "https://www.doubao.com",
+        "mark": "豆",
+        "color": "#7089d0",
+        "description": "聊天、写作，日常问题随时问"
+      },
+      {
+        "id": "kimi",
+        "name": "Kimi",
+        "url": "https://www.kimi.com",
+        "mark": "K",
+        "color": "#4a6381",
+        "description": "长文阅读、资料整理好帮手"
+      },
+      {
+        "id": "chatgpt",
+        "name": "ChatGPT",
+        "url": "https://chatgpt.com",
+        "mark": "✳",
+        "color": "#399c82",
+        "description": "写作、学习与灵感探索"
+      },
+      {
+        "id": "tongyi",
+        "name": "通义千问",
+        "url": "https://www.qianwen.com",
+        "mark": "通",
+        "color": "#8972d7",
+        "description": ""
+      },
+      {
+        "id": "yuanbao",
+        "name": "腾讯元宝",
+        "url": "https://yuanbao.tencent.com",
+        "mark": "元",
+        "color": "#43a488",
+        "description": ""
+      },
+      {
+        "id": "claude",
+        "name": "Claude",
+        "url": "https://claude.ai",
+        "mark": "C",
+        "color": "#b78168",
+        "description": ""
+      },
+      {
+        "id": "jimeng",
+        "name": "即梦AI",
+        "url": "https://jimeng.jianying.com",
+        "mark": "即",
+        "color": "#8b67cf",
+        "description": ""
+      },
+      {
+        "id": "canva",
+        "name": "Canva可画",
+        "url": "https://www.canva.cn",
+        "mark": "C",
+        "color": "#38a6b0",
+        "description": ""
+      },
+      {
+        "id": "perplexity",
+        "name": "Perplexity",
+        "url": "https://www.perplexity.ai",
+        "mark": "P",
+        "color": "#43888d",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "id": "study",
+    "name": "学习成长",
+    "icon": "GraduationCap",
+    "sites": [
+      {
+        "id": "mooc",
+        "name": "中国大学MOOC",
+        "url": "https://www.icourse163.org",
+        "mark": "学",
+        "color": "#53a15e",
+        "description": ""
+      },
+      {
+        "id": "xuexi",
+        "name": "学习强国",
+        "url": "https://www.xuexi.cn",
+        "mark": "学",
+        "color": "#c8524e",
+        "description": ""
+      },
+      {
+        "id": "wikipedia",
+        "name": "维基百科",
+        "url": "https://zh.wikipedia.org",
+        "mark": "W",
+        "color": "#637081",
+        "description": ""
+      },
+      {
+        "id": "baike",
+        "name": "百度百科",
+        "url": "https://baike.baidu.com",
+        "mark": "百",
+        "color": "#4485cf",
+        "description": ""
+      },
+      {
+        "id": "coursera",
+        "name": "Coursera",
+        "url": "https://www.coursera.org",
+        "mark": "C",
+        "color": "#377bcc",
+        "description": ""
+      },
+      {
+        "id": "youdao",
+        "name": "有道词典",
+        "url": "https://dict.youdao.com",
+        "mark": "有",
+        "color": "#d85951",
+        "description": ""
+      },
+      {
+        "id": "ted",
+        "name": "TED",
+        "url": "https://www.ted.com",
+        "mark": "T",
+        "color": "#d64745",
+        "description": ""
+      },
+      {
+        "id": "duolingo",
+        "name": "多邻国",
+        "url": "https://www.duolingo.com",
+        "mark": "多",
+        "color": "#67a939",
+        "description": ""
+      },
+      {
+        "id": "cnki",
+        "name": "中国知网",
+        "url": "https://www.cnki.net",
+        "mark": "知",
+        "color": "#427eb8",
+        "description": ""
+      },
+      {
+        "id": "github",
+        "name": "GitHub",
+        "url": "https://github.com",
+        "mark": "G",
+        "color": "#485568",
+        "description": ""
+      }
+    ]
+  },
+  {
+    "id": "tools",
+    "name": "实用工具",
+    "icon": "Wrench",
+    "sites": [
+      {
+        "id": "baidupan",
+        "name": "百度网盘",
+        "url": "https://pan.baidu.com",
+        "mark": "盘",
+        "color": "#4c89d8",
+        "description": ""
+      },
+      {
+        "id": "aliyunpan",
+        "name": "阿里云盘",
+        "url": "https://www.alipan.com",
+        "mark": "盘",
+        "color": "#a175cf",
+        "description": ""
+      },
+      {
+        "id": "translate",
+        "name": "百度翻译",
+        "url": "https://fanyi.baidu.com",
+        "mark": "译",
+        "color": "#487bc7",
+        "description": ""
+      },
+      {
+        "id": "deepl",
+        "name": "DeepL翻译",
+        "url": "https://www.deepl.com",
+        "mark": "D",
+        "color": "#3b617e",
+        "description": ""
+      },
+      {
+        "id": "ilovepdf",
+        "name": "PDF工具",
+        "url": "https://www.ilovepdf.com/zh-cn",
+        "mark": "P",
+        "color": "#d96865",
+        "description": ""
+      },
+      {
+        "id": "photopea",
+        "name": "在线修图",
+        "url": "https://www.photopea.com",
+        "mark": "P",
+        "color": "#429c8c",
+        "description": ""
+      },
+      {
+        "id": "kuaidi",
+        "name": "快递100",
+        "url": "https://www.kuaidi100.com",
+        "mark": "快",
+        "color": "#d59335",
+        "description": ""
+      },
+      {
+        "id": "weather",
+        "name": "中国天气网",
+        "url": "https://www.weather.com.cn",
+        "mark": "晴",
+        "color": "#4697c2",
+        "description": ""
+      },
+      {
+        "id": "speedtest",
+        "name": "网络测速",
+        "url": "https://www.speedtest.net",
+        "mark": "速",
+        "color": "#6965a8",
+        "description": ""
+      },
+      {
+        "id": "removebg",
+        "name": "图片去背景",
+        "url": "https://www.remove.bg/zh",
+        "mark": "图",
+        "color": "#687e99",
+        "description": ""
+      }
+    ]
+  }
+]

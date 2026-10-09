@@ -2,3 +2,6 @@ node_modules/
 dist/
 .DS_Store
 artifacts/
+.local/
+.env
+backend/hao123-api
