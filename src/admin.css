@@ -233,6 +233,48 @@
   grid-template-columns: 1.3fr 1fr;
   gap: 22px;
 }
+
+.admin-metrics {
+  display: grid;
+  gap: 20px;
+}
+.metrics-activity {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px 48px;
+  align-items: center;
+}
+.metrics-primary {
+  display: grid;
+  gap: 8px;
+  flex: 1 1 220px;
+}
+.metrics-activity dl {
+  flex: 1 1 220px;
+  display: grid;
+  gap: 14px;
+}
+.metrics-activity dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+}
+.metrics-activity dt {
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+.metrics-activity dd {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.admin-metrics td,
+.admin-metrics th {
+  white-space: normal;
+}
+.admin-metrics td:nth-child(2) {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
 .admin-empty {
   text-align: center;
   padding: 45px 15px;

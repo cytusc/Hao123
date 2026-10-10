@@ -181,7 +181,11 @@ export function AccountDialog({ open, onClose }) {
             />
           </div>
           <p className="text-xs text-muted-foreground">
-            只保存网站级汇总次数、分数与最后访问时间。关闭并同步后停止记录与使用你的偏好，改为精选与匿名热门；已有标签可单独删除或清空。
+            网站使用仅保存汇总次数、分数与最后访问时间。关闭并同步后停止记录与使用你的偏好，改为精选与匿名热门；已有标签可单独删除或清空。
+          </p>
+          <p className="text-xs text-muted-foreground">
+            为检查账号找回与同步是否正常，另保存最少的账户操作记录，90
+            天后转为无用户标识的计数；不包含邮箱、网址或兴趣内容。关闭个性化后仍会记录这些服务操作。
           </p>
           <div className="flex items-center justify-between gap-3">
             <h4 className="text-sm font-medium">我的兴趣标签</h4>
