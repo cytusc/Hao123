@@ -22,6 +22,40 @@ function light(r, g, b, period) {
   }[period];
   return palette.map(value => Math.min(255, Math.round(value)));
 }
+function drawWheat(pixels) {
+  const put = (x, y, color) => {
+    if (y < 0 || y >= height) return;
+    // Wrap stalks at tile boundaries so the repeated field has no empty seam.
+    const wrappedX = ((x % width) + width) % width;
+    const pathCenter = 70 + Math.round(Math.sin((y - 60) / 12) * 9);
+    const pathWidth = 1 + Math.max(0, y - 62) * 0.16;
+    if (Math.abs(wrappedX - pathCenter) < pathWidth) return;
+    pixels.set([...color, 255], (y * width + wrappedX) * 4);
+  };
+  // Small ears at the horizon, larger ripe ears in the foreground.
+  for (const [row, base, spacing, stalkHeight] of [[0,72,5,7],[1,80,6,11],[2,90,7,17]]) {
+    for (let x = -3; x < width + 4; x += spacing) {
+      const seed = ((x + 137) * 17 + row * 29) % 7;
+      const stemX = x + (seed % 3);
+      const top = base - stalkHeight - (seed % 3);
+      const straw = [184,119,44];
+      const grain = seed % 2 ? [250,204,101] : [241,184,74];
+      const highlight = [255,225,139];
+      for (let y = top; y <= base; y++) put(stemX, y, straw);
+      put(stemX, top - 1, highlight);
+      for (let ear = 0; ear < 3; ear++) {
+        const y = top + ear * 2;
+        put(stemX - 1, y, grain);
+        put(stemX - 2, y - 1, highlight);
+        put(stemX + 1, y + 1, grain);
+        put(stemX + 2, y, highlight);
+      }
+      put(stemX - 1, base - 3, straw);
+      put(stemX - 2, base - 4, grain);
+      put(stemX + 1, base - 5, grain);
+    }
+  }
+}
 for (const [season, layers] of Object.entries(scenes)) {
   for (const period of ["morning", "day", "evening", "night"]) {
     const dest = join(root, "themes", `${season}-${period}`);
@@ -29,6 +63,7 @@ for (const [season, layers] of Object.entries(scenes)) {
     layers.forEach((id, index) => {
       const original = convert([join(root, "originals", `${id}.png`), "-depth", "8", "rgba:-"]);
       const pixels = Buffer.from(original);
+      if (season === "autumn" && index === 2) drawWheat(pixels);
       for (let i = 0; i < pixels.length; i += 4) {
         const color = light(pixels[i], pixels[i + 1], pixels[i + 2], period);
         color.forEach((value, channel) => { pixels[i + channel] = value; });
