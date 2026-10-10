@@ -1,0 +1,25 @@
+<!-- Generated with Landscape-Generator by westboy31. See SOURCES.md.
+
+MIT License
+
+Copyright (c) 2022 westboy31
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="3840" height="360" viewBox="0 0 3840 360"><defs><linearGradient id="sky" x2="0" y2="1"><stop stop-color="#497f8d"/><stop offset="1" stop-color="#b4d4bf"/></linearGradient><radialGradient id="glow"><stop stop-color="#ffdfb1" stop-opacity=".28"/><stop offset="1" stop-color="#ffdfb1" stop-opacity="0"/></radialGradient></defs><rect width="3840" height="360" fill="url(#sky)"/><ellipse cx="3040" cy="104" rx="340" ry="200" fill="url(#glow)"/><circle cx="3040" cy="104" r="30" fill="#ffe3b3"></circle><path stroke-width="1.6" stroke="#d2e4de" d="M 3318 , 116 c 2 , -4 13 , 7 13 , 7 c 13 , 7 20 , -6 26 , 0" fill="none"></path><path stroke-width="1.6" stroke="#d2e4de" d="M 2300 , 80 c 0 , -4 16 , 9 16 , 9 c 16 , 9 29 , -4 32 , 0" fill="none"></path><path stroke-width="1.6" stroke="#d2e4de" d="M 1926 , 120 c 7 , -9 16 , 5 16 , 5 c 16 , 5 27 , -6 32 , 0" fill="none"></path></svg>
