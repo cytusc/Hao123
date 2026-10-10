@@ -34,6 +34,8 @@ import {
 import { defaultIds, engines } from "./data";
 import { NavigationProvider, useNavigation } from "./navigation";
 import AuthDialog from "./AuthDialog";
+import EmailAction from "./EmailAction";
+import SyncConflictDialog from "./SyncConflictDialog";
 import { AccountDialog, SubmissionDialog } from "./AccountDialogs";
 import SearchStage from "./SearchStage";
 import useLocalClock from "./useLocalClock";
@@ -316,7 +318,9 @@ function App() {
                 className="login-button"
                 aria-label={user ? user.name : "用户登录"}
                 disabled={!ready}
-                onClick={() => (user ? setAccountOpen(true) : setAuthOpen(true))}
+                onClick={() =>
+                  user ? setAccountOpen(true) : setAuthOpen(true)
+                }
               >
                 {user ? (
                   <>
@@ -996,14 +1000,19 @@ function App() {
   );
 }
 createRoot(document.getElementById("root")).render(
-  <NavigationProvider adminMode={adminMode}>
-    {adminMode ? (
-      <Suspense fallback={<div className="admin-gate">正在加载…</div>}>
-        <Admin />
-      </Suspense>
-    ) : (
-      <App />
-    )}
-    <AuthDialog />
-  </NavigationProvider>,
+  ["/auth/verify", "/auth/reset-password"].includes(location.pathname) ? (
+    <EmailAction />
+  ) : (
+    <NavigationProvider adminMode={adminMode}>
+      {adminMode ? (
+        <Suspense fallback={<div className="admin-gate">正在加载…</div>}>
+          <Admin />
+        </Suspense>
+      ) : (
+        <App />
+      )}
+      <AuthDialog />
+      {!adminMode && <SyncConflictDialog />}
+    </NavigationProvider>
+  ),
 );

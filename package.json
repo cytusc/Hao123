@@ -10,6 +10,7 @@
     "generate:banner": "node scripts/generate-search-banner.mjs",
     "generate:seasonal-banner": "node scripts/generate-seasonal-banner.mjs",
     "test:banner": "node --test tests/banner-theme.test.mjs",
+    "test:sync": "node --test tests/preference-sync.test.mjs",
     "backend": "bash scripts/dev-backend.sh",
     "test:backend": "cd backend && go test ./..."
   },
