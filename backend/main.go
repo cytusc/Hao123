@@ -31,11 +31,13 @@ import (
 var files embed.FS
 
 type App struct {
-	db      *pgxpool.Pool
-	secure  bool
-	origins map[string]bool
-	limits  *limiter
-	dist    string
+	db        *pgxpool.Pool
+	secure    bool
+	origins   map[string]bool
+	limits    *limiter
+	dist      string
+	sendMail  func(context.Context, string, string, string) error
+	publicURL string
 }
 type User struct {
 	ID       string    `json:"id"`
@@ -43,6 +45,7 @@ type User struct {
 	Name     string    `json:"name"`
 	Role     string    `json:"role"`
 	Disabled bool      `json:"disabled"`
+	Verified bool      `json:"verified"`
 	Created  time.Time `json:"createdAt"`
 }
 type apiError struct {
@@ -106,7 +109,7 @@ func (a *App) session(r *http.Request) (*User, error) {
 		return nil, nil
 	}
 	u := &User{}
-	err = a.db.QueryRow(r.Context(), `SELECT u.id,u.email,u.name,u.role,u.disabled,u.created_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now() AND NOT u.disabled`, hashToken(cookie.Value)).Scan(&u.ID, &u.Email, &u.Name, &u.Role, &u.Disabled, &u.Created)
+	err = a.db.QueryRow(r.Context(), `SELECT u.id,u.email,u.name,u.role,u.disabled,u.created_at,u.verified FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=$1 AND s.expires_at>now() AND NOT u.disabled`, hashToken(cookie.Value)).Scan(&u.ID, &u.Email, &u.Name, &u.Role, &u.Disabled, &u.Created, &u.Verified)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
@@ -172,6 +175,10 @@ func (a *App) mux() *http.ServeMux {
 	m.HandleFunc("POST /api/auth/logout", a.route(a.logout, ""))
 	m.HandleFunc("GET /api/auth/me", a.route(a.me, ""))
 	m.HandleFunc("PUT /api/auth/password", a.route(a.password, "user"))
+	m.HandleFunc("POST /api/auth/forgot-password", a.route(a.forgotPassword, ""))
+	m.HandleFunc("POST /api/auth/reset-password", a.route(a.resetPassword, ""))
+	m.HandleFunc("GET /api/auth/verify", a.route(a.verifyEmail, ""))
+	m.HandleFunc("POST /api/auth/resend-verification", a.route(a.resendVerification, "user"))
 	m.HandleFunc("POST /api/admin/auth/login", a.route(a.login, ""))
 	m.HandleFunc("POST /api/admin/auth/logout", a.route(a.logout, ""))
 	m.HandleFunc("GET /api/admin/auth/me", a.route(a.me, ""))
@@ -179,6 +186,8 @@ func (a *App) mux() *http.ServeMux {
 	m.HandleFunc("GET /api/preferences", a.route(a.getPrefs, "user"))
 	m.HandleFunc("PUT /api/preferences", a.route(a.savePrefs, "user"))
 	m.HandleFunc("DELETE /api/history", a.route(a.clearHistory, "user"))
+	m.HandleFunc("GET /api/privacy/tags", a.route(a.getProfileTags, "user"))
+	m.HandleFunc("DELETE /api/privacy/tags/{siteId}", a.route(a.deleteProfileTag, "user"))
 	m.HandleFunc("POST /api/clicks", a.route(a.click, "user"))
 	m.HandleFunc("GET /api/recommendations", a.route(a.recommendations, ""))
 	m.HandleFunc("GET /api/submissions", a.route(a.mySubmissions, "user"))
@@ -277,6 +286,9 @@ func (a *App) initialize(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	if _, err = tx.Exec(ctx, "DELETE FROM email_tokens WHERE expires_at<now()"); err != nil {
+		return err
+	}
 	return tx.Commit(ctx)
 }
 
@@ -319,6 +331,9 @@ func main() {
 	}
 	defer db.Close()
 	a := &App{db: db, secure: os.Getenv("COOKIE_SECURE") == "true", origins: map[string]bool{}, limits: &limiter{entries: map[string]limitEntry{}}, dist: env("STATIC_DIR", "../dist")}
+	if a.sendMail, a.publicURL, err = configureMail(); err != nil {
+		log.Fatal(err)
+	}
 	for _, o := range strings.Split(env("APP_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173,http://localhost:8080,http://127.0.0.1:8080"), ",") {
 		a.origins[strings.TrimSpace(o)] = true
 	}

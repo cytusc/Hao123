@@ -1,13 +1,16 @@
 package main
 
 import (
+	"context"
 	"errors"
+	"log"
 	"net/http"
 	"net/mail"
 	"strings"
 	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -28,20 +31,22 @@ type credentials struct {
 	Name     string `json:"name"`
 }
 
-func (a *App) createSession(w http.ResponseWriter, r *http.Request, u *User) error {
+type sessionWriter interface {
+	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
+}
+
+func (a *App) issueSession(r *http.Request, u *User, store sessionWriter) (*http.Cookie, error) {
 	token := randomID()
 	name, path := sessionCookie(r)
 	if cookie, err := r.Cookie(name); err == nil {
-		if _, err = a.db.Exec(r.Context(), "DELETE FROM sessions WHERE token_hash=$1", hashToken(cookie.Value)); err != nil {
-			return err
+		if _, err = store.Exec(r.Context(), "DELETE FROM sessions WHERE token_hash=$1", hashToken(cookie.Value)); err != nil {
+			return nil, err
 		}
 	}
-	if _, err := a.db.Exec(r.Context(), "INSERT INTO sessions(token_hash,user_id,expires_at) VALUES($1,$2,now()+interval '30 days')", hashToken(token), u.ID); err != nil {
-		return err
+	if _, err := store.Exec(r.Context(), "INSERT INTO sessions(token_hash,user_id,expires_at) VALUES($1,$2,now()+interval '30 days')", hashToken(token), u.ID); err != nil {
+		return nil, err
 	}
-	http.SetCookie(w, &http.Cookie{Name: name, Value: token, Path: path, HttpOnly: true, Secure: a.secure, SameSite: http.SameSiteLaxMode, MaxAge: 30 * 86400})
-	respond(w, 200, map[string]any{"user": u})
-	return nil
+	return &http.Cookie{Name: name, Value: token, Path: path, HttpOnly: true, Secure: a.secure, SameSite: http.SameSiteLaxMode, MaxAge: 30 * 86400}, nil
 }
 func (a *App) register(w http.ResponseWriter, r *http.Request, _ *User) error {
 	if !a.limits.allow("register:"+ip(r), 12, 15*minute) {
@@ -64,10 +69,28 @@ func (a *App) register(w http.ResponseWriter, r *http.Request, _ *User) error {
 		return err
 	}
 	u := &User{ID: randomID(), Email: c.Email, Name: c.Name, Role: "user"}
-	if err = a.db.QueryRow(r.Context(), "INSERT INTO users(id,email,name,password_hash) VALUES($1,$2,$3,$4) RETURNING created_at", u.ID, u.Email, u.Name, string(hash)).Scan(&u.Created); err != nil {
+	tx, err := a.db.Begin(r.Context())
+	if err != nil {
 		return err
 	}
-	return a.createSession(w, r, u)
+	defer tx.Rollback(r.Context())
+	if err = tx.QueryRow(r.Context(), "INSERT INTO users(id,email,name,password_hash) VALUES($1,$2,$3,$4) RETURNING created_at", u.ID, u.Email, u.Name, string(hash)).Scan(&u.Created); err != nil {
+		return err
+	}
+	cookie, err := a.issueSession(r, u, tx)
+	if err != nil {
+		return err
+	}
+	if err = tx.Commit(r.Context()); err != nil {
+		return err
+	}
+	if err = a.deliverToken(r.Context(), u.ID, "verify"); err != nil {
+		// The account remains usable; the account dialog offers a retry without re-registering.
+		log.Printf("registration verification delivery failed (%T)", err)
+	}
+	http.SetCookie(w, cookie)
+	respond(w, 200, map[string]any{"user": u})
+	return nil
 }
 
 var dummyHash, _ = bcrypt.GenerateFromPassword([]byte("constant-time-login-comparison"), bcrypt.DefaultCost)
@@ -83,7 +106,13 @@ func (a *App) login(w http.ResponseWriter, r *http.Request, _ *User) error {
 	c.Email = strings.ToLower(strings.TrimSpace(c.Email))
 	u := &User{}
 	var hash string
-	err := a.db.QueryRow(r.Context(), "SELECT id,email,name,role,disabled,created_at,password_hash FROM users WHERE email=$1", c.Email).Scan(&u.ID, &u.Email, &u.Name, &u.Role, &u.Disabled, &u.Created, &hash)
+	tx, err := a.db.Begin(r.Context())
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(r.Context())
+	// A reset must either revoke this login's session or change the hash before it is checked.
+	err = tx.QueryRow(r.Context(), "SELECT id,email,name,role,disabled,created_at,password_hash,verified FROM users WHERE email=$1 FOR UPDATE", c.Email).Scan(&u.ID, &u.Email, &u.Name, &u.Role, &u.Disabled, &u.Created, &hash, &u.Verified)
 	if errors.Is(err, pgx.ErrNoRows) {
 		_ = bcrypt.CompareHashAndPassword(dummyHash, []byte(c.Password))
 		return fail(401, "邮箱或密码不正确")
@@ -94,7 +123,16 @@ func (a *App) login(w http.ResponseWriter, r *http.Request, _ *User) error {
 	if bcrypt.CompareHashAndPassword([]byte(hash), []byte(c.Password)) != nil || u.Disabled || ((u.Role == "admin") != adminRequest(r)) {
 		return fail(401, "邮箱或密码不正确，或账号已停用")
 	}
-	return a.createSession(w, r, u)
+	cookie, err := a.issueSession(r, u, tx)
+	if err != nil {
+		return err
+	}
+	if err = tx.Commit(r.Context()); err != nil {
+		return err
+	}
+	http.SetCookie(w, cookie)
+	respond(w, 200, map[string]any{"user": u})
+	return nil
 }
 func (a *App) logout(w http.ResponseWriter, r *http.Request, _ *User) error {
 	name, path := sessionCookie(r)
@@ -147,8 +185,17 @@ func (a *App) password(w http.ResponseWriter, r *http.Request, u *User) error {
 	if _, err = tx.Exec(r.Context(), "DELETE FROM sessions WHERE user_id=$1", u.ID); err != nil {
 		return err
 	}
+	if _, err = tx.Exec(r.Context(), "UPDATE email_tokens SET used=true WHERE user_id=$1 AND purpose='reset'", u.ID); err != nil {
+		return err
+	}
+	cookie, err := a.issueSession(r, u, tx)
+	if err != nil {
+		return err
+	}
 	if err = tx.Commit(r.Context()); err != nil {
 		return err
 	}
-	return a.createSession(w, r, u)
+	http.SetCookie(w, cookie)
+	respond(w, 200, map[string]any{"user": u})
+	return nil
 }

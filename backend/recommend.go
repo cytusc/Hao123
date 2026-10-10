@@ -2,11 +2,14 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"math"
 	"net/http"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 )
 
 const minute = time.Minute
@@ -19,16 +22,19 @@ type Preferences struct {
 	LargeText    bool     `json:"largeText"`
 	ShowSearch   bool     `json:"showSearch"`
 	Engine       string   `json:"engine"`
+	Version      int64    `json:"version"`
 }
 
 func (a *App) prefs(r *http.Request, id string) (Preferences, error) {
 	var raw []byte
 	var p Preferences
-	err := a.db.QueryRow(r.Context(), "SELECT preferences FROM users WHERE id=$1", id).Scan(&raw)
+	var version int64
+	err := a.db.QueryRow(r.Context(), "SELECT preferences,prefs_version FROM users WHERE id=$1", id).Scan(&raw, &version)
 	if err != nil {
 		return p, err
 	}
 	err = json.Unmarshal(raw, &p)
+	p.Version = version
 	if p.Pinned == nil {
 		p.Pinned = []string{}
 	}
@@ -83,10 +89,17 @@ func validPreferences(p Preferences) error {
 	return nil
 }
 func (a *App) savePrefs(w http.ResponseWriter, r *http.Request, u *User) error {
-	var p Preferences
-	if err := decode(w, r, &p); err != nil {
+	var input struct {
+		Preferences
+		Version *int64 `json:"version"`
+	}
+	if err := decode(w, r, &input); err != nil {
 		return err
 	}
+	if input.Version == nil || *input.Version < 0 {
+		return fail(400, "请携带有效的配置版本，刷新后重试")
+	}
+	p := input.Preferences
 	if err := validPreferences(p); err != nil {
 		return err
 	}
@@ -94,10 +107,51 @@ func (a *App) savePrefs(w http.ResponseWriter, r *http.Request, u *User) error {
 	if err != nil {
 		return err
 	}
-	if _, err = a.db.Exec(r.Context(), "UPDATE users SET preferences=$1 WHERE id=$2", data, u.ID); err != nil {
+	err = a.db.QueryRow(r.Context(), "UPDATE users SET preferences=$1::jsonb-'version',prefs_version=prefs_version+1 WHERE id=$2 AND prefs_version=$3 RETURNING prefs_version", data, u.ID, *input.Version).Scan(&p.Version)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return fail(409, "云端配置已被其他设备更新，请选择如何处理")
+	}
+	if err != nil {
 		return err
 	}
 	respond(w, 200, p)
+	return nil
+}
+
+func (a *App) getProfileTags(w http.ResponseWriter, r *http.Request, u *User) error {
+	// Categories explain the inferred interest; each site remains individually deletable.
+	rows, err := a.db.Query(r.Context(), `SELECT s.id,s.name,c.id,c.name,st.clicks FROM user_site_stats st JOIN sites s ON s.id=st.site_id JOIN categories c ON c.id=s.category_id WHERE st.user_id=$1 ORDER BY c.sort,st.clicks DESC,s.id`, u.ID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	type tag struct {
+		SiteID     string `json:"siteId"`
+		Name       string `json:"name"`
+		CategoryID string `json:"categoryId"`
+		Category   string `json:"category"`
+		Clicks     int64  `json:"clicks"`
+	}
+	tags := []tag{}
+	for rows.Next() {
+		var t tag
+		if err = rows.Scan(&t.SiteID, &t.Name, &t.CategoryID, &t.Category, &t.Clicks); err != nil {
+			return err
+		}
+		tags = append(tags, t)
+	}
+	if err = rows.Err(); err != nil {
+		return err
+	}
+	respond(w, 200, map[string]any{"tags": tags})
+	return nil
+}
+
+func (a *App) deleteProfileTag(w http.ResponseWriter, r *http.Request, u *User) error {
+	if _, err := a.db.Exec(r.Context(), "DELETE FROM user_site_stats WHERE user_id=$1 AND site_id=$2", u.ID, r.PathValue("siteId")); err != nil {
+		return err
+	}
+	respond(w, 200, map[string]bool{"ok": true})
 	return nil
 }
 func (a *App) clearHistory(w http.ResponseWriter, r *http.Request, u *User) error {

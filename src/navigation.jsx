@@ -8,6 +8,7 @@ import React, {
 } from "react";
 import { categories as seedCategories } from "./data";
 import { api } from "./api";
+import { cloudPrefs, mergePreferences } from "./preferenceSync.mjs";
 
 const defaults = {
   pinned: [],
@@ -32,15 +33,6 @@ function guestPrefs() {
     return defaults;
   }
 }
-const cloudPrefs = (p) => ({
-  pinned: p.pinned,
-  hidden: p.hidden,
-  custom: p.custom,
-  personalized: p.personalized,
-  largeText: p.largeText,
-  showSearch: p.showSearch,
-  engine: p.engine,
-});
 const Context = createContext(null);
 export const useNavigation = () => useContext(Context);
 
@@ -65,15 +57,18 @@ export function NavigationProvider({ children, adminMode = false }) {
   const lastSaved = useRef("");
   const userRef = useRef(null);
   const epoch = useRef(0);
+  const prefsVersionRef = useRef(0);
+  const conflictRef = useRef(false);
+  const [syncConflict, setSyncConflict] = useState(false);
+  const [saveRevision, setSaveRevision] = useState(0);
   prefsRef.current = prefs;
   userRef.current = user;
-  const setPrefs = useCallback(
-    (updater) =>
-      rawSetPrefs((old) =>
-        typeof updater === "function" ? updater(old) : updater,
-      ),
-    [],
-  );
+  const setPrefs = useCallback((updater) => {
+    const next =
+      typeof updater === "function" ? updater(prefsRef.current) : updater;
+    prefsRef.current = next;
+    rawSetPrefs(next);
+  }, []);
   const refreshCatalog = useCallback(async () => {
     try {
       const data = await api("/catalog");
@@ -95,15 +90,24 @@ export function NavigationProvider({ children, adminMode = false }) {
   }, [adminMode]);
   const hydrate = useCallback(
     async (nextUser) => {
-      epoch.current++;
+      const currentEpoch = ++epoch.current;
+      let nextPrefs;
       if (nextUser && !adminMode) {
         const p = await api("/preferences");
-        lastSaved.current = JSON.stringify(p);
-        rawSetPrefs({ ...defaults, ...p, history: {} });
+        if (currentEpoch !== epoch.current) return;
+        prefsVersionRef.current = p.version;
+        lastSaved.current = JSON.stringify(cloudPrefs(p));
+        nextPrefs = { ...defaults, ...cloudPrefs(p), history: {} };
       } else {
+        prefsVersionRef.current = 0;
         lastSaved.current = "";
-        rawSetPrefs(guestPrefs());
+        nextPrefs = guestPrefs();
       }
+      prefsRef.current = nextPrefs;
+      rawSetPrefs(nextPrefs);
+      userRef.current = nextUser;
+      conflictRef.current = false;
+      setSyncConflict(false);
       setUser(nextUser);
       setRecommendation({ common: [], sites: [], method: "" });
       setError("");
@@ -132,17 +136,46 @@ export function NavigationProvider({ children, adminMode = false }) {
   const persist = useCallback(
     async (p, account) => {
       if (!account || adminMode) return;
+      const currentEpoch = epoch.current;
       const serialized = JSON.stringify(cloudPrefs(p));
       if (serialized === lastSaved.current) return;
       setSyncState("正在同步");
       const task = chain.current
         .catch(() => {})
         .then(async () => {
-          if (userRef.current?.id !== account.id) return;
-          await api("/preferences", { method: "PUT", body: cloudPrefs(p) });
+          if (
+            userRef.current?.id !== account.id ||
+            currentEpoch !== epoch.current
+          )
+            return;
+          if (conflictRef.current) {
+            const e = new Error("请先处理其他设备的配置变更");
+            e.status = 409;
+            throw e;
+          }
+          if (serialized === lastSaved.current) return;
+          let saved;
+          try {
+            saved = await api("/preferences", {
+              method: "PUT",
+              body: { ...cloudPrefs(p), version: prefsVersionRef.current },
+            });
+          } catch (e) {
+            if (e.status === 409 && currentEpoch === epoch.current) {
+              conflictRef.current = true;
+              setSyncConflict(true);
+              setSyncState("配置有冲突");
+            }
+            throw e;
+          }
+          if (currentEpoch !== epoch.current) return;
+          prefsVersionRef.current = saved.version;
           lastSaved.current = serialized;
           setSyncState("已同步");
           setError("");
+          // Reconcile edits made while this request was in flight, including a
+          // revert to the previous saved value that initially needed no request.
+          setSaveRevision((value) => value + 1);
         });
       chain.current = task;
       return task;
@@ -160,6 +193,7 @@ export function NavigationProvider({ children, adminMode = false }) {
       }
       return;
     }
+    if (syncConflict) return;
     if (JSON.stringify(cloudPrefs(prefs)) === lastSaved.current) return;
     setSyncState("等待同步");
     const timer = setTimeout(
@@ -168,12 +202,55 @@ export function NavigationProvider({ children, adminMode = false }) {
           .then(refreshRecommendations)
           .catch((e) => {
             setError(`配置同步失败：${e.message}`);
-            setSyncState("同步失败");
+            setSyncState(e.status === 409 ? "配置有冲突" : "同步失败");
           }),
       350,
     );
     return () => clearTimeout(timer);
-  }, [prefs, user, ready, persist, refreshRecommendations, adminMode]);
+  }, [
+    prefs,
+    user,
+    ready,
+    persist,
+    refreshRecommendations,
+    adminMode,
+    syncConflict,
+    saveRevision,
+  ]);
+  const resolveSyncConflict = async (choice) => {
+    const account = userRef.current;
+    const currentEpoch = epoch.current;
+    if (!account) return;
+    const task = chain.current
+      .catch(() => {})
+      .then(async () => {
+        const cloud = await api("/preferences");
+        if (currentEpoch !== epoch.current) return;
+        let resolved = cloud;
+        if (choice !== "cloud") {
+          const local = prefsRef.current;
+          const next =
+            choice === "merge"
+              ? mergePreferences(cloud, local)
+              : cloudPrefs(local);
+          resolved = await api("/preferences", {
+            method: "PUT",
+            body: { ...next, version: cloud.version },
+          });
+        }
+        if (currentEpoch !== epoch.current) return;
+        prefsVersionRef.current = resolved.version;
+        lastSaved.current = JSON.stringify(cloudPrefs(resolved));
+        setPrefs({ ...defaults, ...cloudPrefs(resolved), history: {} });
+        conflictRef.current = false;
+        setSyncConflict(false);
+        setSyncState("已同步");
+        setError("");
+        await refreshRecommendations();
+      });
+    chain.current = task;
+    return task;
+  };
   const authenticate = async (mode, form) => {
     const data = await api(`${authPath}/${adminMode ? "login" : mode}`, {
       method: "POST",
@@ -183,8 +260,9 @@ export function NavigationProvider({ children, adminMode = false }) {
     setAuthOpen(false);
   };
   const logout = async () => {
-    await persist(prefsRef.current, userRef.current);
-    await chain.current;
+    await chain.current.catch(() => {});
+    if (!conflictRef.current) await persist(prefsRef.current, userRef.current);
+    await chain.current.catch(() => {});
     await api(`${authPath}/logout`, { method: "POST" });
     await hydrate(null);
   };
@@ -256,6 +334,8 @@ export function NavigationProvider({ children, adminMode = false }) {
         catalogError,
         saveFailed,
         syncState,
+        syncConflict,
+        resolveSyncConflict,
         recommendation,
         authOpen,
         setAuthOpen,
@@ -267,6 +347,10 @@ export function NavigationProvider({ children, adminMode = false }) {
         importLocal,
         refreshCatalog,
         refreshRecommendations,
+        refreshUser: async () => {
+          const data = await api(`${authPath}/me`);
+          setUser(data.user);
+        },
       }}
     >
       {children}

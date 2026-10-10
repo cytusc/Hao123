@@ -15,6 +15,16 @@ CREATE TABLE IF NOT EXISTS users (
  preferences jsonb NOT NULL DEFAULT '{"pinned":[],"hidden":[],"custom":[],"personalized":true,"largeText":false,"showSearch":true,"engine":"baidu"}',
  created_at timestamptz NOT NULL DEFAULT now()
 );
+-- Additive, idempotent migration; initialize runs this under an advisory lock in one transaction.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS verified boolean NOT NULL DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS prefs_version bigint NOT NULL DEFAULT 0;
+CREATE TABLE IF NOT EXISTS email_tokens (
+ token_hash text PRIMARY KEY, user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+ purpose text NOT NULL CHECK(purpose IN ('verify','reset')), expires_at timestamptz NOT NULL,
+ used boolean NOT NULL DEFAULT false
+);
+CREATE INDEX IF NOT EXISTS email_tokens_user_idx ON email_tokens(user_id,purpose);
+CREATE INDEX IF NOT EXISTS email_tokens_expiry_idx ON email_tokens(expires_at);
 CREATE TABLE IF NOT EXISTS sessions (
  token_hash text PRIMARY KEY, user_id text NOT NULL REFERENCES users(id) ON DELETE CASCADE,
  expires_at timestamptz NOT NULL
