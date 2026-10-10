@@ -35,6 +35,9 @@ import { defaultIds, engines } from "./data";
 import { NavigationProvider, useNavigation } from "./navigation";
 import AuthDialog from "./AuthDialog";
 import { AccountDialog, SubmissionDialog } from "./AccountDialogs";
+import SearchStage from "./SearchStage";
+import useLocalClock from "./useLocalClock";
+import { getBannerTheme } from "./bannerTheme.mjs";
 import "./admin.css";
 import "./styles.css";
 
@@ -89,6 +92,8 @@ function Modal({ title, children, onClose }) {
   );
 }
 function App() {
+  const now = useLocalClock();
+  const theme = getBannerTheme(now);
   const {
     categories,
     prefs,
@@ -238,18 +243,6 @@ function App() {
     setModal(null);
     setToast(`已添加${site.name}`);
   };
-  const now = new Date();
-  const hour = now.getHours();
-  const greeting =
-    hour < 6
-      ? "夜深了"
-      : hour < 11
-        ? "早上好"
-        : hour < 14
-          ? "中午好"
-          : hour < 18
-            ? "下午好"
-            : "晚上好";
   const effectiveActive = categories.some((c) => c.id === active)
     ? active
     : "all";
@@ -259,83 +252,86 @@ function App() {
       : categories.filter((c) => c.id === effectiveActive);
   return (
     <div className={prefs.largeText ? "app large-text" : "app"}>
-      <header className="header">
-        <div className="header-inner">
-          <a
-            href="#"
-            className="brand"
-            aria-label="好123轻导航首页"
-            onClick={() => {
-              chooseCategory("all");
-              setQuery("");
-            }}
-          >
-            <span className="brand-symbol">
-              <Grid2X2 size={23} strokeWidth={2.5} />
-            </span>
-            <span className="brand-name">
-              好<span>123</span>
-            </span>
-            <span className="brand-divider" />
-            <span className="brand-caption">轻导航</span>
-          </a>
-          <nav className="top-nav" aria-label="主导航">
-            <button
-              className={
-                active === "all" && submitted === null ? "selected" : ""
-              }
-              onClick={() => chooseCategory("all")}
-            >
-              网址导航
-            </button>
-            <button
-              className={
-                active === "ai" && submitted === null ? "selected" : ""
-              }
-              onClick={() => chooseCategory("ai")}
-            >
-              AI 工具
-              <span className="new-dot" />
-            </button>
-            <button
-              onClick={() => {
-                setEditing(true);
-                document
-                  .getElementById("common")
-                  .scrollIntoView({ behavior: "smooth" });
-              }}
-            >
-              我的常用
-            </button>
-          </nav>
-          <button
-            className="settings-button"
-            aria-label="首页设置"
-            onClick={() => setModal("settings")}
-          >
-            <Settings2 size={17} />
-            <span>首页设置</span>
-          </button>
-          <button
-            className="login-button"
-            aria-label={user ? user.name : "用户登录"}
-            disabled={!ready}
-            onClick={() => (user ? setAccountOpen(true) : setAuthOpen(true))}
-          >
-            {user ? (
-              <>
-                <span className="user-avatar">{user.name[0]}</span>
-                {user.name}
-              </>
-            ) : (
-              "用户登录"
-            )}
-          </button>
-        </div>
-      </header>
-
-      <section className="search-stage">
-        <div className="stage-inner">
+      <SearchStage
+        theme={theme}
+        header={
+          <header className="header">
+            <div className="header-inner">
+              <a
+                href="#"
+                className="brand"
+                aria-label="好123轻导航首页"
+                onClick={() => {
+                  chooseCategory("all");
+                  setQuery("");
+                }}
+              >
+                <span className="brand-symbol">
+                  <Grid2X2 size={23} strokeWidth={2.5} />
+                </span>
+                <span className="brand-name">
+                  好<span>123</span>
+                </span>
+                <span className="brand-divider" />
+                <span className="brand-caption">轻导航</span>
+              </a>
+              <nav className="top-nav" aria-label="主导航">
+                <button
+                  className={
+                    active === "all" && submitted === null ? "selected" : ""
+                  }
+                  onClick={() => chooseCategory("all")}
+                >
+                  网址导航
+                </button>
+                <button
+                  className={
+                    active === "ai" && submitted === null ? "selected" : ""
+                  }
+                  onClick={() => chooseCategory("ai")}
+                >
+                  AI 工具
+                  <span className="new-dot" />
+                </button>
+                <button
+                  onClick={() => {
+                    setEditing(true);
+                    document
+                      .getElementById("common")
+                      .scrollIntoView({ behavior: "smooth" });
+                  }}
+                >
+                  我的常用
+                </button>
+              </nav>
+              <button
+                className="settings-button"
+                aria-label="首页设置"
+                onClick={() => setModal("settings")}
+              >
+                <Settings2 size={17} />
+                <span>首页设置</span>
+              </button>
+              <button
+                className="login-button"
+                aria-label={user ? user.name : "用户登录"}
+                disabled={!ready}
+                onClick={() => (user ? setAccountOpen(true) : setAuthOpen(true))}
+              >
+                {user ? (
+                  <>
+                    <span className="user-avatar">{user.name[0]}</span>
+                    {user.name}
+                  </>
+                ) : (
+                  "用户登录"
+                )}
+              </button>
+            </div>
+          </header>
+        }
+      >
+        <div className="stage-intro">
           <div className="date-line">
             <span>
               {now.getMonth() + 1}月{now.getDate()}日
@@ -356,51 +352,51 @@ function App() {
             <span className="date-separator" />
             <span>今天，也从这里开始</span>
           </div>
-          <h1>{greeting}，上网简单一点。</h1>
-          {prefs.showSearch ? (
-            <div className="search-area">
-              <div className="engine-tabs" aria-label="搜索引擎">
-                {Object.entries(engines).map(([id, engine]) => (
-                  <button
-                    key={id}
-                    aria-pressed={prefs.engine === id}
-                    className={prefs.engine === id ? "active" : ""}
-                    onClick={() => setPrefs((p) => ({ ...p, engine: id }))}
-                  >
-                    {engine.name}
-                  </button>
-                ))}
-              </div>
-              <form className="search-box" onSubmit={search}>
-                <Search size={22} />
-                <input
-                  aria-label="搜索网站或关键词"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="搜网站，或搜你想知道的"
-                />
-                <kbd aria-hidden="true">↵</kbd>
-                <button type="submit">搜索一下</button>
-              </form>
-              <div className="search-suggestions">
-                <span>便捷入口</span>
-                {["铁路12306", "中国天气网", "快递100", "百度翻译"].map((n) => {
-                  const site = allSites.find((s) => s.name === n);
-                  return <React.Fragment key={n}>{link(site)}</React.Fragment>;
-                })}
-              </div>
-            </div>
-          ) : (
-            <button
-              className="restore-search"
-              onClick={() => setPrefs((p) => ({ ...p, showSearch: true }))}
-            >
-              <Search size={18} />
-              显示搜索框
-            </button>
-          )}
+          <h1>{theme.greeting}，上网简单一点。</h1>
         </div>
-      </section>
+        {prefs.showSearch ? (
+          <div className="search-area">
+            <div className="engine-tabs" aria-label="搜索引擎">
+              {Object.entries(engines).map(([id, engine]) => (
+                <button
+                  key={id}
+                  aria-pressed={prefs.engine === id}
+                  className={prefs.engine === id ? "active" : ""}
+                  onClick={() => setPrefs((p) => ({ ...p, engine: id }))}
+                >
+                  {engine.name}
+                </button>
+              ))}
+            </div>
+            <form className="search-box" onSubmit={search}>
+              <Search size={22} />
+              <input
+                aria-label="搜索网站或关键词"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="搜网站，或搜你想知道的"
+              />
+              <kbd aria-hidden="true">↵</kbd>
+              <button type="submit">搜索一下</button>
+            </form>
+            <div className="search-suggestions">
+              <span>便捷入口</span>
+              {["铁路12306", "中国天气网", "快递100", "百度翻译"].map((n) => {
+                const site = allSites.find((s) => s.name === n);
+                return <React.Fragment key={n}>{link(site)}</React.Fragment>;
+              })}
+            </div>
+          </div>
+        ) : (
+          <button
+            className="restore-search"
+            onClick={() => setPrefs((p) => ({ ...p, showSearch: true }))}
+          >
+            <Search size={18} />
+            显示搜索框
+          </button>
+        )}
+      </SearchStage>
 
       <main className="main-container">
         {(error || catalogError) && (
