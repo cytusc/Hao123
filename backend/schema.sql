@@ -44,3 +44,19 @@ CREATE TABLE IF NOT EXISTS submissions (
 );
 CREATE INDEX IF NOT EXISTS submissions_user_idx ON submissions(user_id,created_at DESC);
 CREATE TABLE IF NOT EXISTS app_meta(key text PRIMARY KEY, value text NOT NULL);
+CREATE TABLE IF NOT EXISTS events (
+ id text PRIMARY KEY,
+ kind text NOT NULL CHECK(kind IN ('register','login','verify_email','forgot_request','reset_success','prefs_save','prefs_conflict','tag_delete','tag_clear')),
+ user_id text REFERENCES users(id) ON DELETE CASCADE,
+ payload jsonb NOT NULL DEFAULT '{}' CHECK(jsonb_typeof(payload)='object'),
+ created_at timestamptz NOT NULL DEFAULT clock_timestamp()
+);
+CREATE INDEX IF NOT EXISTS events_created_idx ON events(created_at);
+CREATE INDEX IF NOT EXISTS events_kind_created_idx ON events(kind,created_at);
+CREATE INDEX IF NOT EXISTS events_user_idx ON events(user_id);
+-- Archive operation counts only; never retain user identifiers in long-term totals.
+CREATE TABLE IF NOT EXISTS metric_daily_totals (
+ day date NOT NULL, kind text NOT NULL, count bigint NOT NULL,
+ PRIMARY KEY(day,kind)
+);
+INSERT INTO app_meta(key,value) VALUES('metrics_started_at',clock_timestamp()::text) ON CONFLICT DO NOTHING;

@@ -109,11 +109,13 @@ func (a *App) savePrefs(w http.ResponseWriter, r *http.Request, u *User) error {
 	}
 	err = a.db.QueryRow(r.Context(), "UPDATE users SET preferences=$1::jsonb-'version',prefs_version=prefs_version+1 WHERE id=$2 AND prefs_version=$3 RETURNING prefs_version", data, u.ID, *input.Version).Scan(&p.Version)
 	if errors.Is(err, pgx.ErrNoRows) {
+		a.recordEvent(r.Context(), "prefs_conflict", u.ID, eventPayload{})
 		return fail(409, "云端配置已被其他设备更新，请选择如何处理")
 	}
 	if err != nil {
 		return err
 	}
+	a.recordEvent(r.Context(), "prefs_save", u.ID, eventPayload{})
 	respond(w, 200, p)
 	return nil
 }
@@ -151,6 +153,7 @@ func (a *App) deleteProfileTag(w http.ResponseWriter, r *http.Request, u *User) 
 	if _, err := a.db.Exec(r.Context(), "DELETE FROM user_site_stats WHERE user_id=$1 AND site_id=$2", u.ID, r.PathValue("siteId")); err != nil {
 		return err
 	}
+	a.recordEvent(r.Context(), "tag_delete", u.ID, eventPayload{})
 	respond(w, 200, map[string]bool{"ok": true})
 	return nil
 }
@@ -158,6 +161,7 @@ func (a *App) clearHistory(w http.ResponseWriter, r *http.Request, u *User) erro
 	if _, err := a.db.Exec(r.Context(), "DELETE FROM user_site_stats WHERE user_id=$1", u.ID); err != nil {
 		return err
 	}
+	a.recordEvent(r.Context(), "tag_clear", u.ID, eventPayload{})
 	respond(w, 200, map[string]bool{"ok": true})
 	return nil
 }

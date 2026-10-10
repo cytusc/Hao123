@@ -7,6 +7,7 @@ import {
   Users,
   ClipboardCheck,
   Sparkles,
+  Activity,
   ArrowUpRight,
   Plus,
   Search,
@@ -55,9 +56,11 @@ import {
 } from "@/components/ui/select";
 import { api } from "./api";
 import { useNavigation } from "./navigation";
+import AdminMetrics from "./AdminMetrics";
 
 const tabs = [
   ["overview", "概览", LayoutDashboard],
+  ["metrics", "度量观测", Activity],
   ["sites", "网站管理", Globe],
   ["categories", "分类管理", FolderTree],
   ["users", "用户管理", Users],
@@ -121,6 +124,7 @@ export default function Admin() {
     useNavigation();
   const [tab, setTab] = useState("overview");
   const [overview, setOverview] = useState(null);
+  const [metricsRevision, setMetricsRevision] = useState(0);
   const [sites, setSites] = useState([]);
   const [users, setUsers] = useState([]);
   const [submissions, setSubmissions] = useState([]);
@@ -136,6 +140,7 @@ export default function Admin() {
   const [confirmation, setConfirmation] = useState(null);
   const load = useCallback(async () => {
     if (user?.role !== "admin") return;
+    setMetricsRevision((value) => value + 1);
     setBusy(true);
     setError("");
     try {
@@ -376,6 +381,7 @@ export default function Admin() {
                 {
                   {
                     overview: "看看导航站的运行情况。",
+                    metrics: "观察账号找回与配置同步，先建立真实使用基线。",
                     sites: "维护网站信息，让每一个入口都准确好用。",
                     categories: "整理网站目录，保持清楚的分类。",
                     users: "查看账号与使用状态。",
@@ -419,6 +425,7 @@ export default function Admin() {
               {notice}
             </div>
           )}
+          {tab === "metrics" && <AdminMetrics refreshKey={metricsRevision} />}
           {tab === "overview" && (
             <>
               <div className="admin-stats">

@@ -62,18 +62,33 @@ func (a *App) forgotPassword(w http.ResponseWriter, r *http.Request, _ *User) er
 		return err
 	}
 	email := strings.ToLower(strings.TrimSpace(input.Email))
+	metricsUserID := ""
+	payload := eventPayload{Delivery: "invalid"}
 	// Invalid, unknown, disabled and administrative addresses share the same response.
 	parsed, parseErr := mail.ParseAddress(email)
-	if parseErr == nil && parsed.Address == email && len(email) <= 254 && a.limits.allow("forgot-email:"+hashToken(email), 3, 15*minute) {
-		var id string
-		err := a.db.QueryRow(r.Context(), "SELECT id FROM users WHERE email=$1 AND NOT disabled AND role='user'", email).Scan(&id)
-		if err == nil {
-			err = a.deliverToken(r.Context(), id, "reset")
-		}
-		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-			log.Printf("password recovery delivery failed (%T)", err)
+	if parseErr == nil && parsed.Address == email && len(email) <= 254 {
+		payload.Delivery = "limited"
+		if a.limits.allow("forgot-email:"+hashToken(email), 3, 15*minute) {
+			var id string
+			err := a.db.QueryRow(r.Context(), "SELECT id FROM users WHERE email=$1 AND NOT disabled AND role='user'", email).Scan(&id)
+			payload.Delivery = "lookup_failed"
+			if errors.Is(err, pgx.ErrNoRows) {
+				payload.Delivery = "not_found"
+			}
+			if err == nil {
+				metricsUserID, payload.Eligible = id, true
+				err = a.deliverToken(r.Context(), id, "reset")
+				payload.Delivery = "failed"
+				if err == nil {
+					payload.Delivery = "accepted"
+				}
+			}
+			if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+				log.Printf("password recovery delivery failed (%T)", err)
+			}
 		}
 	}
+	a.recordEvent(r.Context(), "forgot_request", metricsUserID, payload)
 	respond(w, 200, map[string]string{"message": "如果该邮箱可用于找回账号，你将收到密码重置邮件，请查看收件箱和垃圾邮件。"})
 	return nil
 }
@@ -132,7 +147,15 @@ func (a *App) consumeEmailToken(r *http.Request, token, purpose, passwordHash st
 			return err
 		}
 	}
-	return tx.Commit(r.Context())
+	if err = tx.Commit(r.Context()); err != nil {
+		return err
+	}
+	kind := "verify_email"
+	if purpose == "reset" {
+		kind = "reset_success"
+	}
+	a.recordEvent(r.Context(), kind, id, eventPayload{})
+	return nil
 }
 
 func (a *App) verifyEmail(w http.ResponseWriter, r *http.Request, _ *User) error {

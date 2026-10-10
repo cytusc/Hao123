@@ -38,6 +38,7 @@ type App struct {
 	dist      string
 	sendMail  func(context.Context, string, string, string) error
 	publicURL string
+	metrics   metricsState
 }
 type User struct {
 	ID       string    `json:"id"`
@@ -154,6 +155,10 @@ func (a *App) route(h handler, access string) http.HandlerFunc {
 			} else if errors.As(err, &pe) && pe.Code == "23503" {
 				respond(w, 409, map[string]string{"error": "分类不存在或仍有网站、投稿使用，请先处理关联数据"})
 			} else {
+				a.metrics.requestFailures.Add(1)
+				if r.URL.Path == "/api/preferences" && r.Method == "PUT" {
+					a.metrics.syncFailures.Add(1)
+				}
 				log.Printf("request failed: %s %s (%T)", r.Method, r.URL.Path, err)
 				respond(w, 500, map[string]string{"error": "服务暂时不可用，请稍后重试"})
 			}
@@ -193,6 +198,7 @@ func (a *App) mux() *http.ServeMux {
 	m.HandleFunc("GET /api/submissions", a.route(a.mySubmissions, "user"))
 	m.HandleFunc("POST /api/submissions", a.route(a.submit, "user"))
 	m.HandleFunc("GET /api/admin/overview", a.route(a.overview, "admin"))
+	m.HandleFunc("GET /api/admin/metrics", a.route(a.adminMetrics, "admin"))
 	m.HandleFunc("GET /api/admin/sites", a.route(a.adminSites, "admin"))
 	m.HandleFunc("POST /api/admin/sites", a.route(a.createSite, "admin"))
 	m.HandleFunc("PUT /api/admin/sites/{id}", a.route(a.updateSite, "admin"))
@@ -340,6 +346,7 @@ func main() {
 	if err = a.initialize(ctx); err != nil {
 		log.Fatalf("database initialization failed (%T)", err)
 	}
+	go a.runMetricsCleanup(ctx)
 	server := &http.Server{Addr: env("HTTP_ADDR", "127.0.0.1:8080"), Handler: a.mux(), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 20 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16 << 10}
 	go func() {
 		<-ctx.Done()

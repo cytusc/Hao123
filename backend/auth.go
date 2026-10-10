@@ -88,6 +88,7 @@ func (a *App) register(w http.ResponseWriter, r *http.Request, _ *User) error {
 		// The account remains usable; the account dialog offers a retry without re-registering.
 		log.Printf("registration verification delivery failed (%T)", err)
 	}
+	a.recordEvent(r.Context(), "register", u.ID, eventPayload{})
 	http.SetCookie(w, cookie)
 	respond(w, 200, map[string]any{"user": u})
 	return nil
@@ -129,6 +130,9 @@ func (a *App) login(w http.ResponseWriter, r *http.Request, _ *User) error {
 	}
 	if err = tx.Commit(r.Context()); err != nil {
 		return err
+	}
+	if u.Role == "user" {
+		a.recordEvent(r.Context(), "login", u.ID, eventPayload{})
 	}
 	http.SetCookie(w, cookie)
 	respond(w, 200, map[string]any{"user": u})
