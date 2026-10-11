@@ -2012,9 +2012,6 @@ h1 {
   width: fit-content;
   max-width: 100%;
   margin-inline: auto;
-  background: #052e3bbf;
-  border-radius: 3px;
-  box-shadow: 0 0 0 2px #052e3bbf;
 }
 .app .search-stage .engine-tabs button {
   background: #052e3bbf;
