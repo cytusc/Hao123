@@ -4,7 +4,7 @@ export function getQuickLinks({ sites, prefs, user, recommendation }) {
   const ids = user
     ? [
         ...prefs.pinned,
-        ...(prefs.personalized ? recommendation.common.map((site) => site.id) : []),
+        ...(prefs.personalized ? (recommendation?.common ?? []).map((site) => site.id) : []),
         ...fallbackIds,
       ]
     : fallbackIds;

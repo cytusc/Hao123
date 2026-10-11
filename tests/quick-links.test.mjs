@@ -19,3 +19,13 @@ test("disabling personalization retains manual pins and excludes learned entries
 test("hidden or removed sites cannot reappear as recommendations or default fillers", () => {
   assert.deepEqual(links({ sites: sites.filter((site) => site.id !== "weather"), prefs: { ...prefs, hidden: ["learned", "12306"] } }), ["kuaidi", "translate"]);
 });
+
+test("pending recommendations fall back to pins and defaults", () => {
+  for (const recommendation of [undefined, {}, { common: [] }]) {
+    assert.deepEqual(links({ recommendation, prefs: { ...prefs, pinned: ["pinned"] } }), ["pinned", "12306", "weather", "kuaidi"]);
+  }
+});
+
+test("two pins precede recommendations and the result is capped at four", () => {
+  assert.deepEqual(links({ prefs: { ...prefs, pinned: ["pinned", "custom-1"] } }), ["pinned", "custom-1", "learned", "12306"]);
+});

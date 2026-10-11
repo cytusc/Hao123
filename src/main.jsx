@@ -42,6 +42,7 @@ import useLocalClock from "./useLocalClock";
 import { getBannerTheme } from "./bannerTheme.mjs";
 import Feedback, { useFeedback } from "./Feedback";
 import { getQuickLinks } from "./quickLinks.mjs";
+import { CommonSkeleton, DirectorySkeleton } from "./Skeleton";
 import "./admin.css";
 import "./styles.css";
 
@@ -110,6 +111,7 @@ function App() {
     saveFailed,
     user,
     ready,
+    preferencesLoading,
     error,
     catalogError,
     syncState,
@@ -142,7 +144,7 @@ function App() {
   const quickLinks = getQuickLinks({ sites, prefs, user, recommendation });
   const find = (id) => sites.find((s) => s.id === id);
   const learned = user
-    ? recommendation.common.map((s) => s.id)
+    ? (recommendation?.common ?? []).map((s) => s.id)
     : prefs.personalized
       ? Object.entries(prefs.history)
           .sort(
@@ -455,63 +457,68 @@ function App() {
               {editing ? "完成" : "管理"}
             </button>
           </div>
-          <div className="common-grid">
-            {common.map((site) => (
-              <div className="common-item" key={site.id}>
-                {link(
-                  site,
-                  "common-link",
-                  <>
-                    <Mark site={site} />
-                    <span>{site.name}</span>
-                    {prefs.pinned.includes(site.id) && (
-                      <Pin className="pinned-mark" size={11} />
-                    )}
-                  </>,
-                )}
-                {editing && (
-                  <div className="edit-controls">
-                    <button
-                      aria-label={`${prefs.pinned.includes(site.id) ? "取消置顶" : "置顶"}${site.name}`}
-                      className={
-                        prefs.pinned.includes(site.id) ? "is-pinned" : ""
-                      }
-                      onClick={() => togglePin(site)}
-                    >
-                      <Pin size={12} />
-                    </button>
-                    <button
-                      aria-label={`移除${site.name}`}
-                      onClick={() => {
-                        setPrefs((p) => ({
-                          ...p,
-                          hidden: [...p.hidden, site.id],
-                          pinned: p.pinned.filter((id) => id !== site.id),
-                        }));
-                        notify(`已从常用移除${site.name}`);
-                      }}
-                    >
-                      <X size={13} />
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
-            <button
-              className="add-common"
-              onClick={() => {
-                setName("");
-                setUrl("");
-                setFormError("");
-                setModal("add");
-              }}
-            >
-              <span>
-                <Plus size={23} />
-              </span>
-              添加网站
-            </button>
-          </div>
+          {!error && !catalogError && prefs.pinned.length === 0 &&
+          (preferencesLoading || (user && !ready)) ? (
+            <CommonSkeleton />
+          ) : (
+            <div className="common-grid">
+              {common.map((site) => (
+                <div className="common-item" key={site.id}>
+                  {link(
+                    site,
+                    "common-link",
+                    <>
+                      <Mark site={site} />
+                      <span>{site.name}</span>
+                      {prefs.pinned.includes(site.id) && (
+                        <Pin className="pinned-mark" size={11} />
+                      )}
+                    </>,
+                  )}
+                  {editing && (
+                    <div className="edit-controls">
+                      <button
+                        aria-label={`${prefs.pinned.includes(site.id) ? "取消置顶" : "置顶"}${site.name}`}
+                        className={
+                          prefs.pinned.includes(site.id) ? "is-pinned" : ""
+                        }
+                        onClick={() => togglePin(site)}
+                      >
+                        <Pin size={12} />
+                      </button>
+                      <button
+                        aria-label={`移除${site.name}`}
+                        onClick={() => {
+                          setPrefs((p) => ({
+                            ...p,
+                            hidden: [...p.hidden, site.id],
+                            pinned: p.pinned.filter((id) => id !== site.id),
+                          }));
+                          notify(`已从常用移除${site.name}`);
+                        }}
+                      >
+                        <X size={13} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+              <button
+                className="add-common"
+                onClick={() => {
+                  setName("");
+                  setUrl("");
+                  setFormError("");
+                  setModal("add");
+                }}
+              >
+                <span>
+                  <Plus size={23} />
+                </span>
+                添加网站
+              </button>
+            </div>
+          )}
         </section>
 
         <div className="directory-layout" ref={contentRef}>
@@ -553,38 +560,42 @@ function App() {
                     </button>
                   ))}
                 </nav>
-                <div className="category-list">
-                  {visibleCategories.map((c) => {
-                    const Icon = icons[c.icon] || Grid2X2;
-                    return (
-                      <div className="category-row" key={c.id}>
-                        <button
-                          className="category-label"
-                          onClick={() => chooseCategory(c.id)}
-                        >
-                          <Icon size={17} />
-                          <span>{c.name}</span>
-                        </button>
-                        <div className="category-sites">
-                          {c.sites.map((site, i) => (
-                            <React.Fragment key={site.id}>
-                              {link(
-                                site,
-                                i === 0 ? "featured-site" : "",
-                                <>
-                                  {site.name}
-                                  {site.id === "deepseek" && (
-                                    <span className="tiny-tag">热门</span>
-                                  )}
-                                </>,
-                              )}
-                            </React.Fragment>
-                          ))}
+                {categories.length === 0 && !error && !catalogError ? (
+                  <DirectorySkeleton />
+                ) : (
+                  <div className="category-list">
+                    {visibleCategories.map((c) => {
+                      const Icon = icons[c.icon] || Grid2X2;
+                      return (
+                        <div className="category-row" key={c.id}>
+                          <button
+                            className="category-label"
+                            onClick={() => chooseCategory(c.id)}
+                          >
+                            <Icon size={17} />
+                            <span>{c.name}</span>
+                          </button>
+                          <div className="category-sites">
+                            {c.sites.map((site, i) => (
+                              <React.Fragment key={site.id}>
+                                {link(
+                                  site,
+                                  i === 0 ? "featured-site" : "",
+                                  <>
+                                    {site.name}
+                                    {site.id === "deepseek" && (
+                                      <span className="tiny-tag">热门</span>
+                                    )}
+                                  </>,
+                                )}
+                              </React.Fragment>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
                 {effectiveActive !== "all" && (
                   <div className="channel-details">
                     <h3>
