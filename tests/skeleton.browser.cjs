@@ -66,16 +66,12 @@ const baseURL = process.env.UX_BASE_URL || "http://localhost:5175";
       assert.deepEqual(await geometry(logged.page, ".common-grid"), before, `common layout at ${width}`);
     }
     assert.equal(await logged.page.locator(".skeleton").count(), 0);
-    assert.equal(await logged.page.getByRole("textbox", { name: "搜索网站或关键词" }).isEnabled(), true);
+    assert.equal(await logged.page.getByRole("searchbox", { name: "搜索网站或关键词" }).isEnabled(), true);
     assert.equal(logged.control.requests.some(([, method]) => method === "PUT"), false, "hydration must not save guest preferences");
 
     const empty = await fixture({ empty: true });
-    await empty.page.locator('.category-list[aria-busy="true"]').waitFor();
-    for (const width of [1440, 1050, 800, 560, 320]) {
-      await empty.page.setViewportSize({ width, height: 1000 });
-      await logged.page.setViewportSize({ width, height: 1000 });
-      assert.deepEqual(await geometry(empty.page, ".category-list"), await geometry(logged.page, ".category-list"), `directory layout at ${width}`);
-    }
+    await empty.page.getByText("当前没有收录网站", { exact: true }).waitFor();
+    assert.equal(await empty.page.locator('.category-list[aria-busy="true"]').count(), 0, "a loaded empty directory must not show an endless loading state");
     empty.control.failPrefs = true;
     empty.release();
     await empty.page.getByText(/配置加载失败/).waitFor();

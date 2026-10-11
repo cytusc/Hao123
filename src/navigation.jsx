@@ -46,6 +46,9 @@ export function NavigationProvider({ children, adminMode = false }) {
   const [preferencesLoading, setPreferencesLoading] = useState(false);
   const [error, setError] = useState("");
   const [catalogError, setCatalogError] = useState("");
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [retrying, setRetrying] = useState(false);
+  const retryRunning = useRef(false);
   const [saveFailed, setSaveFailed] = useState(false);
   const [syncState, setSyncState] = useState("");
   const [recommendation, setRecommendation] = useState({
@@ -71,12 +74,15 @@ export function NavigationProvider({ children, adminMode = false }) {
     rawSetPrefs(next);
   }, []);
   const refreshCatalog = useCallback(async () => {
+    setCatalogLoading(true);
     try {
       const data = await api("/catalog");
       setCategories(data.categories);
       setCatalogError("");
     } catch {
-      setCatalogError("目录服务暂时不可用，正在展示本机精选目录。");
+      setCatalogError("目录服务暂时不可用，已保留可用目录，可重试获取最新内容。");
+    } finally {
+      setCatalogLoading(false);
     }
   }, []);
   const refreshRecommendations = useCallback(async () => {
@@ -313,16 +319,23 @@ export function NavigationProvider({ children, adminMode = false }) {
     await refreshRecommendations();
   };
   const retrySync = async () => {
+    if (retryRunning.current) return;
+    retryRunning.current = true;
+    setRetrying(true);
     try {
       if (!userRef.current) {
         const data = await api(`${authPath}/me`);
         await hydrate(data.user);
       }
       await persist(prefsRef.current, userRef.current);
+      setError("");
       await refreshCatalog();
       await refreshRecommendations();
     } catch (e) {
       setError(e.message);
+    } finally {
+      retryRunning.current = false;
+      setRetrying(false);
     }
   };
   const importLocal = () => {
@@ -346,6 +359,8 @@ export function NavigationProvider({ children, adminMode = false }) {
         user,
         ready,
         preferencesLoading,
+        catalogLoading,
+        retrying,
         error,
         catalogError,
         saveFailed,
