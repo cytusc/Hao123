@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect, useRef, useState } from "react";
+import React, { lazy, Suspense, useEffect, useId, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   Search,
@@ -40,6 +40,8 @@ import { AccountDialog, SubmissionDialog } from "./AccountDialogs";
 import SearchStage from "./SearchStage";
 import useLocalClock from "./useLocalClock";
 import { getBannerTheme } from "./bannerTheme.mjs";
+import Feedback, { useFeedback } from "./Feedback";
+import { getQuickLinks } from "./quickLinks.mjs";
 import "./admin.css";
 import "./styles.css";
 
@@ -67,8 +69,9 @@ function Mark({ site, small = false }) {
     </span>
   );
 }
-function Modal({ title, children, onClose }) {
+function Modal({ title, children, onClose, feedbackHost }) {
   const ref = useRef();
+  const titleId = useId();
   useEffect(() => {
     const dialog = ref.current;
     dialog.showModal();
@@ -78,17 +81,21 @@ function Modal({ title, children, onClose }) {
     <dialog
       ref={ref}
       className="modal"
+      aria-labelledby={titleId}
       onCancel={onClose}
       onClick={(e) => {
-        if (e.target === ref.current) onClose();
+        if (e.target !== ref.current) return;
+        const bounds = ref.current.getBoundingClientRect();
+        if (e.clientX < bounds.left || e.clientX > bounds.right || e.clientY < bounds.top || e.clientY > bounds.bottom) onClose();
       }}
     >
       <div className="modal-heading">
-        <h2>{title}</h2>
+        <h2 id={titleId}>{title}</h2>
         <button className="icon-button" aria-label="关闭" onClick={onClose}>
           <X size={21} />
         </button>
       </div>
+      <div className="modal-feedback-target" ref={feedbackHost} />
       {children}
     </dialog>
   );
@@ -123,17 +130,16 @@ function App() {
   const [submitted, setSubmitted] = useState(null);
   const [modal, setModal] = useState(null);
   const [editing, setEditing] = useState(false);
-  const [toast, setToast] = useState("");
+  const { toast, notify, dismiss } = useFeedback();
+  const [feedbackHost, setFeedbackHost] = useState(null);
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
   const [formError, setFormError] = useState("");
+  const [resultAnnouncement, setResultAnnouncement] = useState("");
+  const [clearingHistory, setClearingHistory] = useState(false);
   const contentRef = useRef();
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(""), 2600);
-    return () => clearTimeout(t);
-  }, [toast]);
   const sites = [...allSites, ...prefs.custom];
+  const quickLinks = getQuickLinks({ sites, prefs, user, recommendation });
   const find = (id) => sites.find((s) => s.id === id);
   const learned = user
     ? recommendation.common.map((s) => s.id)
@@ -153,7 +159,7 @@ function App() {
   const togglePin = (site) => {
     const pinned = prefs.pinned.includes(site.id);
     if (!pinned && prefs.pinned.length >= 9) {
-      setToast("最多置顶 9 个网站，请先取消一个置顶");
+      notify("最多置顶 9 个网站，请先取消一个置顶", "info");
       return;
     }
     setPrefs((p) => ({
@@ -163,7 +169,7 @@ function App() {
         : [...p.pinned, site.id],
       hidden: p.hidden.filter((id) => id !== site.id),
     }));
-    setToast(pinned ? `已取消置顶${site.name}` : `已置顶${site.name}`);
+    notify(pinned ? `已取消置顶${site.name}` : `已置顶${site.name}`);
   };
   const link = (site, className = "", children = null) =>
     site ? (
@@ -187,7 +193,7 @@ function App() {
     setSubmitted(query.trim());
     requestAnimationFrame(() =>
       contentRef.current?.scrollIntoView({
-        behavior: "smooth",
+        behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
         block: "start",
       }),
     );
@@ -200,6 +206,15 @@ function App() {
             .toLowerCase()
             .includes(submitted.toLowerCase()),
         );
+  useEffect(() => {
+    setResultAnnouncement("");
+    if (submitted === null) return;
+    const timer = setTimeout(
+      () => setResultAnnouncement(`“${submitted}” 找到 ${results.length} 个网站`),
+      40,
+    );
+    return () => clearTimeout(timer);
+  }, [submitted, results.length]);
   const addCustom = (e) => {
     e.preventDefault();
     let parsed;
@@ -243,7 +258,7 @@ function App() {
       pinned: [...p.pinned, site.id],
     }));
     setModal(null);
-    setToast(`已添加${site.name}`);
+    notify(`已添加${site.name}`);
   };
   const effectiveActive = categories.some((c) => c.id === active)
     ? active
@@ -254,6 +269,13 @@ function App() {
       : categories.filter((c) => c.id === effectiveActive);
   return (
     <div className={prefs.largeText ? "app large-text" : "app"}>
+      <a
+        className="skip-link"
+        href="#main-content"
+        onClick={() => document.getElementById("main-content")?.focus({ preventScroll: true })}
+      >
+        跳到主内容
+      </a>
       <SearchStage
         theme={theme}
         header={
@@ -293,14 +315,15 @@ function App() {
                   onClick={() => chooseCategory("ai")}
                 >
                   AI 工具
-                  <span className="new-dot" />
                 </button>
                 <button
                   onClick={() => {
                     setEditing(true);
                     document
                       .getElementById("common")
-                      .scrollIntoView({ behavior: "smooth" });
+                      .scrollIntoView({
+                        behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+                      });
                   }}
                 >
                   我的常用
@@ -385,10 +408,9 @@ function App() {
             </form>
             <div className="search-suggestions">
               <span>便捷入口</span>
-              {["铁路12306", "中国天气网", "快递100", "百度翻译"].map((n) => {
-                const site = allSites.find((s) => s.name === n);
-                return <React.Fragment key={n}>{link(site)}</React.Fragment>;
-              })}
+              {quickLinks.map((site) => (
+                <React.Fragment key={site.id}>{link(site)}</React.Fragment>
+              ))}
             </div>
           </div>
         ) : (
@@ -402,7 +424,10 @@ function App() {
         )}
       </SearchStage>
 
-      <main className="main-container">
+      <main className="main-container" id="main-content" tabIndex={-1}>
+        <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+          {resultAnnouncement}
+        </div>
         {(error || catalogError) && (
           <div className="service-notice" role="status">
             <span>{error || catalogError}</span>
@@ -463,7 +488,7 @@ function App() {
                           hidden: [...p.hidden, site.id],
                           pinned: p.pinned.filter((id) => id !== site.id),
                         }));
-                        setToast(`已从常用移除${site.name}`);
+                        notify(`已从常用移除${site.name}`);
                       }}
                     >
                       <X size={13} />
@@ -725,47 +750,6 @@ function App() {
                 ))}
               </section>
             )}
-            <section className="ai-discovery">
-              <div className="side-heading">
-                <h2>
-                  <Sparkles size={17} />
-                  试试 AI 新工具
-                </h2>
-                <button
-                  aria-label="查看全部AI工具"
-                  onClick={() => chooseCategory("ai")}
-                >
-                  <ChevronRight size={17} />
-                </button>
-              </div>
-              <p className="side-description">写点东西，找点灵感，省点时间。</p>
-              {["deepseek", "doubao", "kimi"].map((id) => {
-                const site = find(id);
-                return (
-                  <div className="ai-site" key={id}>
-                    {link(
-                      site,
-                      "ai-site-link",
-                      <>
-                        <Mark site={site} small />
-                        <div>
-                          <strong>{site.name}</strong>
-                          <p>{site.description}</p>
-                        </div>
-                        <ArrowUpRight size={15} />
-                      </>,
-                    )}
-                  </div>
-                );
-              })}
-              <button
-                className="explore-ai"
-                onClick={() => chooseCategory("ai")}
-              >
-                发现更多 AI 工具
-                <ChevronRight size={14} />
-              </button>
-            </section>
             <div className="quiet-note">
               <span className="note-icon">
                 <Heart size={18} />
@@ -806,12 +790,12 @@ function App() {
       </main>
 
       {modal === "add" && (
-        <Modal title="添加常用网站" onClose={() => setModal(null)}>
+        <Modal title="添加常用网站" onClose={() => setModal(null)} feedbackHost={setFeedbackHost}>
           <p className="modal-description">
             选一个常用网站，或添加你自己的网址。
           </p>
           <div className="pick-sites">
-            {defaultIds.map((id) => {
+            {defaultIds.filter((id) => find(id)).map((id) => {
               const site = find(id);
               return (
                 <button
@@ -864,7 +848,7 @@ function App() {
         </Modal>
       )}
       {modal === "settings" && (
-        <Modal title="让首页更顺手" onClose={() => setModal(null)}>
+        <Modal title="让首页更顺手" onClose={() => setModal(null)} feedbackHost={setFeedbackHost}>
           <p className="modal-description">
             {user
               ? `常用与设置同步到你的账号（${syncState}）。`
@@ -924,23 +908,30 @@ function App() {
           </div>
           <button
             className="reset-button"
-            onClick={async () => {
+            disabled={clearingHistory}
+            aria-busy={clearingHistory}
+            onClick={async (event) => {
+              const returnFocus = event.currentTarget;
+              if (clearingHistory) return;
+              setClearingHistory(true);
               try {
                 await clearHistory();
-                setToast("已清空点击记录");
+                notify("已清空点击记录", "success", returnFocus);
               } catch (e) {
-                setToast(e.message);
+                notify(e.message, "error", returnFocus);
+              } finally {
+                setClearingHistory(false);
               }
             }}
           >
             <RotateCcw size={15} />
-            清空点击记录
+            {clearingHistory ? "正在清空…" : "清空点击记录"}
           </button>
           <button
             className="reset-button"
             onClick={() => {
               setPrefs((p) => ({ ...p, hidden: [] }));
-              setToast("已恢复移除的常用网站");
+              notify("已恢复移除的常用网站");
             }}
           >
             <Bookmark size={15} />
@@ -951,7 +942,7 @@ function App() {
               className="reset-button"
               onClick={() => {
                 importLocal();
-                setToast("已将本机常用加入账号");
+                notify("已将本机常用加入账号");
               }}
             >
               <Bookmark size={15} />
@@ -967,7 +958,7 @@ function App() {
         </Modal>
       )}
       {modal === "about" && (
-        <Modal title="关于好123轻导航" onClose={() => setModal(null)}>
+        <Modal title="关于好123轻导航" onClose={() => setModal(null)} feedbackHost={setFeedbackHost}>
           <div className="about-body">
             <span className="brand-symbol">
               <Grid2X2 size={26} />
@@ -990,12 +981,7 @@ function App() {
         open={submissionOpen}
         onClose={() => setSubmissionOpen(false)}
       />
-      {toast && (
-        <div className="toast" role="status">
-          <Check size={17} />
-          {toast}
-        </div>
-      )}
+      <Feedback toast={toast} onDismiss={dismiss} host={feedbackHost} />
     </div>
   );
 }
