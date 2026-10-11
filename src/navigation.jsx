@@ -43,6 +43,7 @@ export function NavigationProvider({ children, adminMode = false }) {
   const prefsRef = useRef(prefs);
   const [user, setUser] = useState(null);
   const [ready, setReady] = useState(false);
+  const [preferencesLoading, setPreferencesLoading] = useState(false);
   const [error, setError] = useState("");
   const [catalogError, setCatalogError] = useState("");
   const [saveFailed, setSaveFailed] = useState(false);
@@ -93,12 +94,22 @@ export function NavigationProvider({ children, adminMode = false }) {
       const currentEpoch = ++epoch.current;
       let nextPrefs;
       if (nextUser && !adminMode) {
-        const p = await api("/preferences");
+        setPreferencesLoading(true);
+        let p;
+        try {
+          p = await api("/preferences");
+        } catch (e) {
+          if (currentEpoch === epoch.current) setError(`配置加载失败：${e.message}`);
+          throw e;
+        } finally {
+          if (currentEpoch === epoch.current) setPreferencesLoading(false);
+        }
         if (currentEpoch !== epoch.current) return;
         prefsVersionRef.current = p.version;
         lastSaved.current = JSON.stringify(cloudPrefs(p));
         nextPrefs = { ...defaults, ...cloudPrefs(p), history: {} };
       } else {
+        setPreferencesLoading(false);
         prefsVersionRef.current = 0;
         lastSaved.current = "";
         nextPrefs = guestPrefs();
@@ -303,6 +314,10 @@ export function NavigationProvider({ children, adminMode = false }) {
   };
   const retrySync = async () => {
     try {
+      if (!userRef.current) {
+        const data = await api(`${authPath}/me`);
+        await hydrate(data.user);
+      }
       await persist(prefsRef.current, userRef.current);
       await refreshCatalog();
       await refreshRecommendations();
@@ -330,6 +345,7 @@ export function NavigationProvider({ children, adminMode = false }) {
         setPrefs,
         user,
         ready,
+        preferencesLoading,
         error,
         catalogError,
         saveFailed,
