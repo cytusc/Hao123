@@ -21,7 +21,7 @@ import {
   Wrench,
   SlidersHorizontal,
   RotateCcw,
-  Heart,
+  Info,
   CloudSun,
   TrainFront,
   Package,
@@ -39,12 +39,12 @@ import SyncConflictDialog from "./SyncConflictDialog";
 import { AccountDialog, SubmissionDialog } from "./AccountDialogs";
 import SearchStage from "./SearchStage";
 import useLocalClock from "./useLocalClock";
-import { getBannerTheme } from "./bannerTheme.mjs";
 import Feedback, { useFeedback } from "./Feedback";
 import { getQuickLinks } from "./quickLinks.mjs";
 import { CommonSkeleton, DirectorySkeleton } from "./Skeleton";
 import "./admin.css";
 import "./styles.css";
+import "./homepage.css";
 
 const Admin = lazy(() => import("./Admin"));
 const adminMode =
@@ -64,9 +64,9 @@ function Mark({ site, small = false }) {
   return (
     <span
       className={`site-mark ${small ? "small" : ""}`}
-      style={{ "--site-color": site.color }}
+      aria-hidden="true"
     >
-      {site.mark}
+      {Array.from(site.name)[0] || <Grid2X2 size={18} />}
     </span>
   );
 }
@@ -103,7 +103,6 @@ function Modal({ title, children, onClose, feedbackHost }) {
 }
 function App() {
   const now = useLocalClock();
-  const theme = getBannerTheme(now);
   const {
     categories,
     prefs,
@@ -112,6 +111,8 @@ function App() {
     user,
     ready,
     preferencesLoading,
+    catalogLoading,
+    retrying,
     error,
     catalogError,
     syncState,
@@ -210,13 +211,18 @@ function App() {
         );
   useEffect(() => {
     setResultAnnouncement("");
-    if (submitted === null) return;
     const timer = setTimeout(
-      () => setResultAnnouncement(`“${submitted}” 找到 ${results.length} 个网站`),
+      () => setResultAnnouncement(
+        submitted !== null
+          ? `“${submitted}” 找到 ${results.length} 个网站`
+          : active === "all"
+            ? "显示全部网站分类"
+            : `显示${categories.find((c) => c.id === active)?.name || "当前分类"}`,
+      ),
       40,
     );
     return () => clearTimeout(timer);
-  }, [submitted, results.length]);
+  }, [submitted, results.length, active, categories]);
   const addCustom = (e) => {
     e.preventDefault();
     let parsed;
@@ -279,7 +285,6 @@ function App() {
         跳到主内容
       </a>
       <SearchStage
-        theme={theme}
         header={
           <header className="header">
             <div className="header-inner">
@@ -303,6 +308,7 @@ function App() {
               </a>
               <nav className="top-nav" aria-label="主导航">
                 <button
+                  aria-current={active === "all" && submitted === null ? "page" : undefined}
                   className={
                     active === "all" && submitted === null ? "selected" : ""
                   }
@@ -311,6 +317,7 @@ function App() {
                   网址导航
                 </button>
                 <button
+                  aria-current={active === "ai" && submitted === null ? "page" : undefined}
                   className={
                     active === "ai" && submitted === null ? "selected" : ""
                   }
@@ -343,6 +350,7 @@ function App() {
                 className="login-button"
                 aria-label={user ? user.name : "用户登录"}
                 disabled={!ready}
+                aria-describedby={!ready ? "account-loading" : undefined}
                 onClick={() =>
                   user ? setAccountOpen(true) : setAuthOpen(true)
                 }
@@ -356,6 +364,7 @@ function App() {
                   "用户登录"
                 )}
               </button>
+              {!ready && <span id="account-loading" className="sr-only">账户信息正在加载，请稍候。</span>}
             </div>
           </header>
         }
@@ -381,7 +390,7 @@ function App() {
             <span className="date-separator" />
             <span>今天，也从这里开始</span>
           </div>
-          <h1>{theme.greeting}，上网简单一点。</h1>
+          <h1>上网，从熟悉的入口开始</h1>
         </div>
         {prefs.showSearch ? (
           <div className="search-area">
@@ -397,13 +406,14 @@ function App() {
                 </button>
               ))}
             </div>
-            <form className="search-box" onSubmit={search}>
-              <Search size={22} />
+            <form className="search-box" role="search" aria-label="网站与关键词搜索" onSubmit={search}>
+              <Search size={22} aria-hidden="true" />
               <input
                 aria-label="搜索网站或关键词"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="搜网站，或搜你想知道的"
+                placeholder="搜索网站或关键词"
+                type="search"
               />
               <kbd aria-hidden="true">↵</kbd>
               <button type="submit">搜索一下</button>
@@ -430,10 +440,15 @@ function App() {
         <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
           {resultAnnouncement}
         </div>
-        {(error || catalogError) && (
-          <div className="service-notice" role="status">
-            <span>{error || catalogError}</span>
-            <button onClick={retrySync}>重试</button>
+        {(error || catalogError || retrying) && (
+          <div className="service-notice" role="status" aria-live="polite" aria-atomic="true">
+            <Info size={19} aria-hidden="true" />
+            <div>
+              {error && <p>{error}</p>}
+              {catalogError && <p>{catalogError}</p>}
+              {retrying && <p>正在重试，请稍候。</p>}
+            </div>
+            <button onClick={retrySync} disabled={retrying}>{retrying ? "重试中…" : "重试"}</button>
           </div>
         )}
         <section
@@ -443,7 +458,6 @@ function App() {
         >
           <div className="section-heading">
             <div className="title-group">
-              <Bookmark size={19} />
               <h2 id="common-title">我的常用</h2>
               <span className="section-note">
                 {prefs.personalized ? "常去的网站，就在手边" : "已关闭自动排序"}
@@ -457,6 +471,9 @@ function App() {
               {editing ? "完成" : "管理"}
             </button>
           </div>
+          {common.length === 0 && !preferencesLoading && (
+            <p className="common-empty">还没有常用网站，可以添加自己的常用入口。</p>
+          )}
           {!error && !catalogError && prefs.pinned.length === 0 &&
           (preferencesLoading || (user && !ready)) ? (
             <CommonSkeleton />
@@ -525,12 +542,11 @@ function App() {
           <section className="directory" aria-labelledby="directory-title">
             <div className="directory-heading">
               <div className="title-group">
-                <Grid2X2 size={19} />
                 <h2 id="directory-title">
-                  {submitted !== null ? "搜索结果" : "发现好网站"}
+                  {submitted !== null ? "搜索结果" : "网站分类"}
                 </h2>
               </div>
-              <span className="directory-caption">精选网站，放心直达</span>
+              <span className="directory-caption">按分类查找网站</span>
             </div>
             {submitted === null ? (
               <>
@@ -560,8 +576,13 @@ function App() {
                     </button>
                   ))}
                 </nav>
-                {categories.length === 0 && !error && !catalogError ? (
+                {categories.length === 0 && catalogLoading && !catalogError ? (
                   <DirectorySkeleton />
+                ) : categories.length === 0 ? (
+                  <div className="empty-state">
+                    <h3>{catalogError ? "目录暂时无法加载" : "当前没有收录网站"}</h3>
+                    <p>{catalogError ? "请使用上方重试入口重新获取目录。" : "可以继续搜索，或添加自己的常用网站。"}</p>
+                  </div>
                 ) : (
                   <div className="category-list">
                     {visibleCategories.map((c) => {
@@ -576,17 +597,12 @@ function App() {
                             <span>{c.name}</span>
                           </button>
                           <div className="category-sites">
-                            {c.sites.map((site, i) => (
+                            {c.sites.map((site) => (
                               <React.Fragment key={site.id}>
                                 {link(
                                   site,
-                                  i === 0 ? "featured-site" : "",
-                                  <>
-                                    {site.name}
-                                    {site.id === "deepseek" && (
-                                      <span className="tiny-tag">热门</span>
-                                    )}
-                                  </>,
+                                  "",
+                                  site.name,
                                 )}
                               </React.Fragment>
                             ))}
@@ -702,7 +718,7 @@ function App() {
             </div>
           </section>
 
-          <aside className="sidebar">
+          <aside className="sidebar" aria-label="实用工具与推荐">
             <section className="daily-tools">
               <div className="side-heading">
                 <h2>日常小帮手</h2>
@@ -761,19 +777,6 @@ function App() {
                 ))}
               </section>
             )}
-            <div className="quiet-note">
-              <span className="note-icon">
-                <Heart size={18} />
-              </span>
-              <div>
-                <strong>清清爽爽，刚刚好。</strong>
-                <p>
-                  少一点打扰，多一点顺手。
-                  <br />
-                  让首页回到上网的起点。
-                </p>
-              </div>
-            </div>
           </aside>
         </div>
         {saveFailed && (
