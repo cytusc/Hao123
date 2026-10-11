@@ -11,6 +11,7 @@
     "generate:seasonal-banner": "node scripts/generate-seasonal-banner.mjs",
     "test:banner": "node --test tests/banner-theme.test.mjs",
     "test:sync": "node --test tests/preference-sync.test.mjs",
+    "test:ux": "node --test tests/quick-links.test.mjs",
     "backend": "bash scripts/dev-backend.sh",
     "test:backend": "cd backend && go test ./..."
   },
