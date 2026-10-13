@@ -11,23 +11,15 @@ import {
   Bookmark,
   Check,
   ShieldCheck,
-  Sparkles,
   Newspaper,
   Clapperboard,
   ShoppingBag,
   MessagesSquare,
   Mail,
   GraduationCap,
-  Wrench,
   SlidersHorizontal,
   RotateCcw,
   Info,
-  CloudSun,
-  TrainFront,
-  Package,
-  Languages,
-  MapPin,
-  FileText,
   Pin,
   ExternalLink,
 } from "lucide-react";
@@ -56,9 +48,7 @@ const icons = {
   ShoppingBag,
   MessagesSquare,
   Mail,
-  Sparkles,
   GraduationCap,
-  Wrench,
 };
 function Mark({ site, small = false }) {
   return (
@@ -68,6 +58,41 @@ function Mark({ site, small = false }) {
     >
       {Array.from(site.name)[0] || <Grid2X2 size={18} />}
     </span>
+  );
+}
+function faviconFallback(site) {
+  const letter = Array.from(site.name)[0] || "网";
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">` +
+    `<rect width="20" height="20" rx="4" fill="#e8e8ed"/>` +
+    `<text x="10" y="14.5" text-anchor="middle" font-size="11" font-family="PingFang SC, Microsoft YaHei, sans-serif" fill="#6e6e73">${letter}</text>` +
+    `</svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+function Favicon({ site, size = 20 }) {
+  let host = "";
+  try {
+    host = new URL(site.url).hostname;
+  } catch {
+    host = "";
+  }
+  return (
+    <img
+      className="site-favicon"
+      src={host ? `https://${host}/favicon.ico` : faviconFallback(site)}
+      width={size}
+      height={size}
+      alt=""
+      loading="lazy"
+      aria-hidden="true"
+      onError={(e) => {
+        const img = e.currentTarget;
+        if (!img.dataset.fallback) {
+          img.dataset.fallback = "1";
+          img.src = faviconFallback(site);
+        }
+      }}
+    />
   );
 }
 function Modal({ title, children, onClose, feedbackHost }) {
@@ -387,10 +412,7 @@ function App() {
                 ][now.getDay()]
               }
             </span>
-            <span className="date-separator" />
-            <span>今天，也从这里开始</span>
           </div>
-          <h1>上网，从熟悉的入口开始</h1>
         </div>
         {prefs.showSearch ? (
           <div className="search-area">
@@ -485,7 +507,7 @@ function App() {
                     site,
                     "common-link",
                     <>
-                      <Mark site={site} />
+                      <Favicon site={site} size={20} />
                       <span>{site.name}</span>
                       {prefs.pinned.includes(site.id) && (
                         <Pin className="pinned-mark" size={11} />
@@ -546,36 +568,16 @@ function App() {
                   {submitted !== null ? "搜索结果" : "网站分类"}
                 </h2>
               </div>
-              <span className="directory-caption">按分类查找网站</span>
+              {effectiveActive === "all" ? (
+                <span className="directory-caption">按分类查找网站</span>
+              ) : (
+                <button className="text-button" onClick={() => chooseCategory("all")}>
+                  全部分类
+                </button>
+              )}
             </div>
             {submitted === null ? (
               <>
-                <nav className="category-tabs" aria-label="网站分类">
-                  <button
-                    className={active === "all" ? "active" : ""}
-                    aria-pressed={active === "all"}
-                    onClick={() => chooseCategory("all")}
-                  >
-                    全部分类
-                  </button>
-                  {categories.map((c) => (
-                    <button
-                      key={c.id}
-                      className={active === c.id ? "active" : ""}
-                      aria-pressed={active === c.id}
-                      onClick={() => chooseCategory(c.id)}
-                    >
-                      {c.name
-                        .replace("新闻资讯", "新闻")
-                        .replace("视频娱乐", "视频")
-                        .replace("购物生活", "购物")
-                        .replace("社交社区", "社交")
-                        .replace("邮箱办公", "办公")
-                        .replace("学习成长", "学习")
-                        .replace("实用工具", "工具")}
-                    </button>
-                  ))}
-                </nav>
                 {categories.length === 0 && catalogLoading && !catalogError ? (
                   <DirectorySkeleton />
                 ) : categories.length === 0 ? (
@@ -602,7 +604,10 @@ function App() {
                                 {link(
                                   site,
                                   "",
-                                  site.name,
+                                  <>
+                                    <Favicon site={site} size={14} />
+                                    <span>{site.name}</span>
+                                  </>,
                                 )}
                               </React.Fragment>
                             ))}
@@ -717,67 +722,6 @@ function App() {
               </button>
             </div>
           </section>
-
-          <aside className="sidebar" aria-label="实用工具与推荐">
-            <section className="daily-tools">
-              <div className="side-heading">
-                <h2>日常小帮手</h2>
-                <Wrench size={17} />
-              </div>
-              <div className="tool-grid">
-                {[
-                  ["weather", "查天气", CloudSun],
-                  ["12306", "买车票", TrainFront],
-                  ["kuaidi", "查快递", Package],
-                  ["translate", "翻译", Languages],
-                  ["amap", "看地图", MapPin],
-                  ["ilovepdf", "转 PDF", FileText],
-                ].map(([id, label, ToolIcon]) => (
-                  <React.Fragment key={id}>
-                    {link(
-                      find(id),
-                      "tool-link",
-                      <>
-                        <span className={`tool-symbol tool-${id}`}>
-                          <ToolIcon size={24} strokeWidth={1.6} />
-                        </span>
-                        <span>{label}</span>
-                      </>,
-                    )}
-                  </React.Fragment>
-                ))}
-              </div>
-            </section>
-            {user && prefs.personalized && recommendation.sites.length > 0 && (
-              <section className="ai-discovery personal-discovery">
-                <div className="side-heading">
-                  <h2>
-                    <Sparkles size={17} />
-                    猜你想用
-                  </h2>
-                </div>
-                <p className="side-description">
-                  根据你的常用习惯，发现下一个好网站。
-                </p>
-                {recommendation.sites.slice(0, 4).map((site) => (
-                  <div className="ai-site" key={site.id}>
-                    {link(
-                      site,
-                      "ai-site-link",
-                      <>
-                        <Mark site={site} small />
-                        <div>
-                          <strong>{site.name}</strong>
-                          <p>{site.reason}</p>
-                        </div>
-                        <ArrowUpRight size={15} />
-                      </>,
-                    )}
-                  </div>
-                ))}
-              </section>
-            )}
-          </aside>
         </div>
         {saveFailed && (
           <p className="storage-warning">
@@ -785,6 +729,24 @@ function App() {
           </p>
         )}
         <footer className="footer">
+          <div className="footer-tools">
+            <span className="footer-tools-label">日常小帮手</span>
+            {[
+              ["weather", "查天气"],
+              ["12306", "买车票"],
+              ["kuaidi", "查快递"],
+              ["translate", "翻译"],
+              ["amap", "看地图"],
+              ["ilovepdf", "转 PDF"],
+            ].map(([id, label]) => {
+              const site = find(id);
+              return site ? (
+                <React.Fragment key={id}>
+                  {link(site, "footer-tool", label)}
+                </React.Fragment>
+              ) : null;
+            })}
+          </div>
           <div>
             <span className="footer-brand">好123</span>
             <span>一个简单好用的上网起点</span>

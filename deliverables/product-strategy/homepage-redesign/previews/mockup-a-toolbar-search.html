@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>方向A · 工具栏式搜索 / 目录为主 — 好123首页重设计预览稿</title>
+<style>
+/* ===== 静态视觉稿：非业务代码，仅用于设计评审 ===== */
+.m{
+  --bg:#fbfbfd; --surface:#ffffff;
+  --text:#1d1d1f; --text-2:#6e6e73; --text-3:#86868b; --text-4:#aeaeb2;
+  --line:#d2d2d7; --line-soft:#e8e8ed;
+  --blue:#0071e3; --blue-hover:#0077ed; --blue-soft:#eef4fd;
+  --focus-ring:0 0 0 3px rgba(0,113,227,.18);
+}
+.m,.m *{margin:0;padding:0;box-sizing:border-box}
+.m{
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Segoe UI",sans-serif;
+  background:var(--bg); color:var(--text);
+  -webkit-font-smoothing:antialiased; min-height:100%;
+}
+.m a{color:inherit;text-decoration:none}
+.m button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;padding:0}
+.m img.fav{width:16px;height:16px;border-radius:3px;object-fit:contain;flex:none;background:#fff}
+
+/* 顶栏 */
+.m .topbar{height:52px;background:#fff;border-bottom:1px solid var(--line-soft);display:flex;align-items:center;gap:26px;padding:0 26px}
+.m .brand{display:flex;align-items:center;gap:9px}
+.m .brand-mark{width:22px;height:22px;border-radius:6px;background:var(--blue);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.m .brand-name{font-size:15px;font-weight:600;letter-spacing:.2px}
+.m .brand-sub{font-size:11px;color:var(--text-3);padding-left:10px;margin-left:3px;border-left:1px solid var(--line)}
+.m .nav{display:flex;gap:24px}
+.m .nav a{font-size:13px;height:52px;display:flex;align-items:center;position:relative;color:var(--text)}
+.m .nav a:hover{color:var(--blue)}
+.m .nav a.on{color:var(--blue);font-weight:600}
+.m .nav a.on::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--blue);border-radius:2px 2px 0 0}
+.m .topbar-right{margin-left:auto;display:flex;align-items:center;gap:16px}
+.m .setting{display:flex;align-items:center;gap:5px;font-size:12.5px;color:var(--text-2)}
+.m .setting:hover{color:var(--text)}
+.m .btn-login{font-size:12.5px;padding:5px 13px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--text)}
+.m .btn-login:hover{border-color:var(--text-3)}
+
+/* 页面骨架 */
+.m .page{max-width:1120px;margin:0 auto;padding:24px 26px 36px}
+
+/* 搜索行：工具栏，而非 Hero */
+.m .search-row{margin:4px 0 16px}
+.m .search-date{font-size:12px;color:var(--text-3);margin-bottom:9px}
+.m .searchbox{display:flex;align-items:center;gap:10px;height:46px;max-width:680px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:0 6px;transition:border-color .15s,box-shadow .15s}
+.m .searchbox:focus-within{border-color:var(--blue);box-shadow:var(--focus-ring)}
+.m .engine{display:flex;align-items:center;gap:6px;font-size:13px;padding:6px 8px 6px 10px;border-radius:8px;color:var(--text)}
+.m .engine:hover{background:#f5f5f7}
+.m .engine .caret{width:9px;height:9px;color:var(--text-3);flex:none}
+.m .v-sep{width:1px;height:20px;background:var(--line-soft);flex:none}
+.m .searchbox input{flex:1;border:none;outline:none;font-size:15px;color:var(--text);background:transparent;min-width:0}
+.m .searchbox input::placeholder{color:var(--text-4)}
+.m .btn-search{height:34px;padding:0 17px;background:var(--blue);color:#fff;font-size:13px;font-weight:500;border-radius:9px;flex:none}
+.m .btn-search:hover{background:var(--blue-hover)}
+.m .quick{margin-top:11px;display:flex;align-items:center;flex-wrap:wrap;gap:7px 16px;font-size:12.5px}
+.m .quick .lb{color:var(--text-3)}
+.m .quick a{color:var(--text-2)}
+.m .quick a:hover{color:var(--blue)}
+
+/* 服务提示：内联细条，中性色 */
+.m .notice{display:flex;align-items:center;gap:9px;background:#f5f5f7;border:1px solid var(--line-soft);border-radius:9px;padding:9px 12px;margin:2px 0 24px;font-size:12.5px;color:var(--text-2)}
+.m .notice .ic{width:14px;height:14px;color:var(--text-3);flex:none}
+.m .notice .txt{flex:1}
+.m .btn-retry{font-size:12.5px;font-weight:500;color:var(--blue);padding:3px 11px;border-radius:7px;flex:none}
+.m .btn-retry:hover{background:var(--blue-soft)}
+
+/* 区块 */
+.m .sec{margin-bottom:30px}
+.m .sec-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:15px}
+.m .sec-head h2{font-size:15px;font-weight:600;letter-spacing:.2px}
+.m .sec-head .side{font-size:12px;color:var(--text-3)}
+.m .sec-head .side:hover{color:var(--blue)}
+.m .sec-head .side.blue{color:var(--blue)}
+
+/* 我的常用：书签条，不是卡片 */
+.m .fav-grid{display:flex;flex-wrap:wrap;gap:13px 24px;align-items:center}
+.m .fav-item{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text)}
+.m .fav-item img{width:20px;height:20px;border-radius:5px}
+.m .fav-item:hover{color:var(--blue)}
+.m .fav-add{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-3);border:1px dashed var(--line);border-radius:9px;padding:6px 13px}
+.m .fav-add:hover{color:var(--blue);border-color:var(--blue)}
+
+/* 分类 tab */
+.m .tabs{display:flex;gap:20px;border-bottom:1px solid var(--line-soft);margin-bottom:20px}
+.m .tabs button{font-size:13px;color:var(--text-2);padding:6px 1px 9px;position:relative;white-space:nowrap}
+.m .tabs button:hover{color:var(--text)}
+.m .tabs button.on{color:var(--text);font-weight:600}
+.m .tabs button.on::after{content:"";position:absolute;left:-2px;right:-2px;bottom:-1px;height:2px;background:var(--blue);border-radius:2px}
+
+/* 主体：目录 + 窄工具栏 */
+.m .main-grid{display:grid;grid-template-columns:minmax(0,1fr) 208px;gap:44px}
+.m .dir-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:26px 30px}
+.m .grp h3{font-size:13px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.m .grp h3 .ci{width:14px;height:14px;color:var(--text-3);flex:none}
+.m .grp .links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 14px}
+.m .grp .links a{display:flex;align-items:center;gap:7px;font-size:12.5px;line-height:1;height:25px;color:var(--text)}
+.m .grp .links a img{width:15px;height:15px;border-radius:3px}
+.m .grp .links a:hover{color:var(--blue)}
+
+.m .tools h3{font-size:13px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.m .tools h3 .cfg{width:13px;height:13px;color:var(--text-4)}
+.m .tool-list a{display:flex;align-items:center;gap:8px;font-size:12.5px;height:31px;color:var(--text)}
+.m .tool-list a svg{width:14px;height:14px;color:var(--text-3);flex:none}
+.m .tool-list a:hover{color:var(--blue)}
+.m .tool-list a:hover svg{color:var(--blue)}
+
+/* 页脚 */
+.m .footer{margin-top:34px;border-top:1px solid var(--line-soft);padding:16px 0 26px;display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--text-3)}
+.m .footer .fl{display:flex;gap:18px}
+.m .footer a:hover{color:var(--text-2)}
+</style>
+</head>
+<body>
+<div class="m">
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">123</span>
+      <span class="brand-name">好123</span>
+      <span class="brand-sub">轻导航</span>
+    </div>
+    <nav class="nav">
+      <a href="#" class="on">轻导航</a>
+      <a href="#">网址导航</a>
+      <a href="#">AI工具</a>
+      <a href="#">我的常用</a>
+    </nav>
+    <div class="topbar-right">
+      <a class="setting" href="#">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h9M19 7h1M4 17h3M13 17h7"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
+        首页设置
+      </a>
+      <button class="btn-login">用户登录</button>
+    </div>
+  </header>
+
+  <main class="page">
+
+    <!-- 搜索：一行工具，不是宣传主视觉 -->
+    <section class="search-row">
+      <div class="search-date">10月13日 星期二</div>
+      <div class="searchbox">
+        <button class="engine">
+          <img class="fav" src="https://www.baidu.com/favicon.ico" data-l="百" alt="">
+          百度
+          <svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <span class="v-sep"></span>
+        <input type="text" placeholder="搜索网站或关键词" aria-label="搜索网站或关键词">
+        <button class="btn-search">搜索一下</button>
+      </div>
+      <div class="quick">
+        <span class="lb">便捷入口</span>
+        <a href="#">铁路12306</a>
+        <a href="#">中国天气网</a>
+        <a href="#">快递100</a>
+        <a href="#">百度翻译</a>
+      </div>
+    </section>
+
+    <!-- 服务提示：内联、中性、可重试 -->
+    <div class="notice" role="status">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v5" stroke-linecap="round"/><path d="M12 8h.01" stroke-linecap="round"/></svg>
+      <span class="txt">目录服务暂时不可用，已保留可用目录，可重试获取最新内容。</span>
+      <button class="btn-retry">重试</button>
+    </div>
+
+    <!-- 我的常用：书签条 -->
+    <section class="sec">
+      <div class="sec-head">
+        <h2>我的常用</h2>
+        <a class="side blue" href="#">管理</a>
+      </div>
+      <div class="fav-grid">
+        <a class="fav-item" href="#"><img src="https://www.weather.com.cn/favicon.ico" data-l="天" alt="">中国天气网</a>
+        <a class="fav-item" href="#"><img src="https://www.taobao.com/favicon.ico" data-l="淘" alt="">淘宝</a>
+        <a class="fav-item" href="#"><img src="https://www.jd.com/favicon.ico" data-l="京" alt="">京东</a>
+        <a class="fav-item" href="#"><img src="https://www.bilibili.com/favicon.ico" data-l="哔" alt="">哔哩哔哩</a>
+        <a class="fav-item" href="#"><img src="https://www.douyin.com/favicon.ico" data-l="抖" alt="">抖音</a>
+        <a class="fav-item" href="#"><img src="https://www.zhihu.com/favicon.ico" data-l="知" alt="">知乎</a>
+        <a class="fav-item" href="#"><img src="https://weibo.com/favicon.ico" data-l="微" alt="">微博</a>
+        <a class="fav-item" href="#"><img src="https://mail.qq.com/favicon.ico" data-l="邮" alt="">QQ邮箱</a>
+        <a class="fav-item" href="#"><img src="https://pan.baidu.com/favicon.ico" data-l="盘" alt="">百度网盘</a>
+        <a class="fav-item" href="#"><img src="https://www.baidu.com/favicon.ico" data-l="百" alt="">百度</a>
+        <button class="fav-add">+ 添加网站</button>
+      </div>
+    </section>
+
+    <div class="main-grid">
+      <!-- 网站分类：分类标题 + 链接列表 -->
+      <section class="sec">
+        <div class="sec-head">
+          <h2>网站分类</h2>
+          <a class="side" href="#">按分类查找网站</a>
+        </div>
+        <div class="tabs">
+          <button class="on">全部分类</button>
+          <button>新闻</button>
+          <button>视频</button>
+          <button>购物</button>
+          <button>社交</button>
+          <button>办公</button>
+          <button>AI工具</button>
+          <button>学习</button>
+          <button>工具</button>
+        </div>
+        <div class="dir-grid">
+          <div class="grp">
+            <h3><svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h6M7 13h10M7 16h7"/></svg>新闻资讯</h3>
+            <div class="links">
+              <a href="#"><img src="https://www.people.com.cn/favicon.ico" data-l="人" alt="">人民网</a>
+              <a href="#"><img src="https://www.xinhuanet.com/favicon.ico" data-l="新" alt="">新华网</a>
+              <a href="#"><img src="https://www.cctv.com/favicon.ico" data-l="央" alt="">央视新闻</a>
+              <a href="#"><img src="https://www.thepaper.cn/favicon.ico" data-l="澎" alt="">澎湃新闻</a>
+              <a href="#"><img src="https://www.163.com/favicon.ico" data-l="网" alt="">网易新闻</a>
+              <a href="#"><img src="https://www.sina.com.cn/favicon.ico" data-l="新浪" alt="">新浪新闻</a>
+              <a href="#"><img src="https://www.ifeng.com/favicon.ico" data-l="凤" alt="">凤凰网</a>
+              <a href="#"><img src="https://www.sohu.com/favicon.ico" data-l="搜" alt="">搜狐新闻</a>
+            </div>
+          </div>
+          <div class="grp">
+            <h3><svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M10 9l5 3-5 3z" fill="currentColor" stroke="none"/></svg>视频娱乐</h3>
+            <div class="links">
+              <a href="#"><img src="https://www.bilibili.com/favicon.ico" data-l="哔" alt="">哔哩哔哩</a>
+              <a href="#"><img src="https://www.iqiyi.com/favicon.ico" data-l="爱" alt="">爱奇艺</a>
+              <a href="#"><img src="https://v.qq.com/favicon.ico" data-l="腾" alt="">腾讯视频</a>
+              <a href="#"><img src="https://www.youku.com/favicon.ico" data-l="优" alt="">优酷</a>
+              <a href="#"><img src="https://www.douyin.com/favicon.ico" data-l="抖" alt="">抖音</a>
+              <a href="#"><img src="https://www.kuaishou.com/favicon.ico" data-l="快" alt="">快手</a>
+              <a href="#"><img src="https://www.mgtv.com/favicon.ico" data-l="芒" alt="">芒果TV</a>
+            </div>
+          </div>
+          <div class="grp">
+            <h3><svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8h14l-1.2 12H6.2z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>购物</h3>
+            <div class="links">
+              <a href="#"><img src="https://www.taobao.com/favicon.ico" data-l="淘" alt="">淘宝</a>
+              <a href="#"><img src="https://www.jd.com/favicon.ico" data-l="京" alt="">京东</a>
+              <a href="#"><img src="https://www.pinduoduo.com/favicon.ico" data-l="拼" alt="">拼多多</a>
+              <a href="#"><img src="https://www.tmall.com/favicon.ico" data-l="天" alt="">天猫</a>
+              <a href="#"><img src="https://www.vip.com/favicon.ico" data-l="唯" alt="">唯品会</a>
+              <a href="#"><img src="https://www.dewu.com/favicon.ico" data-l="得" alt="">得物</a>
+            </div>
+          </div>
+          <div class="grp">
+            <h3><svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/></svg>社交平台</h3>
+            <div class="links">
+              <a href="#"><img src="https://weibo.com/favicon.ico" data-l="微" alt="">微博</a>
+              <a href="#"><img src="https://www.zhihu.com/favicon.ico" data-l="知" alt="">知乎</a>
+              <a href="#"><img src="https://www.douban.com/favicon.ico" data-l="豆" alt="">豆瓣</a>
+              <a href="#"><img src="https://www.xiaohongshu.com/favicon.ico" data-l="红" alt="">小红书</a>
+              <a href="#"><img src="https://www.qq.com/favicon.ico" data-l="Q" alt="">QQ</a>
+              <a href="#"><img src="https://weixin.qq.com/favicon.ico" data-l="微" alt="">微信</a>
+            </div>
+          </div>
+          <div class="grp">
+            <h3><svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/></svg>办公学习</h3>
+            <div class="links">
+              <a href="#"><img src="https://www.wps.cn/favicon.ico" data-l="W" alt="">WPS</a>
+              <a href="#"><img src="https://www.dingtalk.com/favicon.ico" data-l="钉" alt="">钉钉</a>
+              <a href="#"><img src="https://www.feishu.cn/favicon.ico" data-l="飞" alt="">飞书</a>
+              <a href="#"><img src="https://mail.163.com/favicon.ico" data-l="网" alt="">网易邮箱</a>
+              <a href="#"><img src="https://mail.qq.com/favicon.ico" data-l="邮" alt="">QQ邮箱</a>
+            </div>
+          </div>
+          <div class="grp">
+            <h3><svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l1.7 4.6L18.3 9l-4.6 1.4L12 15l-1.7-4.6L5.7 9l4.6-1.4z"/><path d="M18.5 15l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg>AI工具</h3>
+            <div class="links">
+              <a href="#"><img src="https://chat.openai.com/favicon.ico" data-l="C" alt="">ChatGPT</a>
+              <a href="#"><img src="https://yiyan.baidu.com/favicon.ico" data-l="文" alt="">文心一言</a>
+              <a href="#"><img src="https://tongyi.aliyun.com/favicon.ico" data-l="通" alt="">通义千问</a>
+              <a href="#"><img src="https://kimi.moonshot.cn/favicon.ico" data-l="K" alt="">Kimi</a>
+              <a href="#"><img src="https://www.doubao.com/favicon.ico" data-l="豆" alt="">豆包</a>
+              <a href="#"><img src="https://www.deepseek.com/favicon.ico" data-l="D" alt="">DeepSeek</a>
+            </div>
+          </div>
+          <div class="grp">
+            <h3><svg class="ci" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-5.6-7-11a7 7 0 0 1 14 0c0 5.4-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>生活服务</h3>
+            <div class="links">
+              <a href="#"><img src="https://www.meituan.com/favicon.ico" data-l="美" alt="">美团</a>
+              <a href="#"><img src="https://www.ele.me/favicon.ico" data-l="饿" alt="">饿了么</a>
+              <a href="#"><img src="https://www.12306.cn/favicon.ico" data-l="铁" alt="">铁路12306</a>
+              <a href="#"><img src="https://www.ctrip.com/favicon.ico" data-l="携" alt="">携程</a>
+              <a href="#"><img src="https://www.amap.com/favicon.ico" data-l="高" alt="">高德地图</a>
+              <a href="#"><img src="https://map.baidu.com/favicon.ico" data-l="百" alt="">百度地图</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 日常小帮手：窄栏文字列表 -->
+      <aside class="sec tools">
+        <h3>日常小帮手
+          <svg class="cfg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h9M19 7h1M4 17h3M13 17h7"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
+        </h3>
+        <div class="tool-list">
+          <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/></svg>查天气</a>
+          <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="17" rx="3"/><path d="M5 9h14M9 21v-2M15 21v-2M9 13h2M13 13h2"/></svg>买车票</a>
+          <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7z"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg>查快递</a>
+          <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h9M8.5 6v-.5A2.5 2.5 0 0 1 11 3h0A2.5 2.5 0 0 1 13.5 5.5V6M13 18l4-8M17 18l-4-8M6 13l-2 5M20 13l2 5"/></svg>翻译</a>
+          <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-5.6-7-11a7 7 0 0 1 14 0c0 5.4-7 11-7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>看地图</a>
+          <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M9 12h6M9 16h4"/></svg>转PDF</a>
+          <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v8M9.5 10.2c0-1 1.1-1.7 2.5-1.7s2.5.7 2.5 1.7c0 1.2-1.2 1.6-2.5 1.9s-2.5.8-2.5 2c0 1 1.1 1.7 2.5 1.7s2.5-.7 2.5-1.7"/></svg>查汇率</a>
+          <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 17a8 8 0 1 1 16 0"/><path d="M12 17l4-4"/></svg>网速测试</a>
+        </div>
+      </aside>
+    </div>
+
+    <footer class="footer">
+      <div class="fl">
+        <a href="#">关于好123</a>
+        <a href="#">隐私与设置</a>
+        <a href="#">网站投稿</a>
+        <a href="#">帮助中心</a>
+      </div>
+      <span>© 2026 好123</span>
+    </footer>
+
+  </main>
+</div>
+
+<script>
+/* favicon 加载失败时回退为统一中性首字母块（避免随机配色） */
+document.querySelectorAll('.m img.fav').forEach(function(img){
+  img.addEventListener('error', function(){
+    if (img.dataset.fixed) return;
+    img.dataset.fixed = '1';
+    var l = img.dataset.l || '', svg =
+      "<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32'>" +
+      "<rect width='32' height='32' rx='6' fill='#e8e8ed'/>" +
+      "<text x='16' y='21' font-size='15' font-family='sans-serif' fill='#6e6e73' text-anchor='middle'>" + l + "</text></svg>";
+    img.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+  });
+});
+window.addEventListener('load', function(){
+  setTimeout(function(){
+    document.body.insertAdjacentHTML('beforeend', '<!--H:' + document.body.scrollHeight + '-->');
+  }, 300);
+});
+</script>
+</body>
+</html>
